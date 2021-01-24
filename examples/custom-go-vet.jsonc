@@ -1,0 +1,14 @@
+{
+    "any-lint.linters": [
+        {
+            "name": "go vet",
+            "binPath": "go",
+            "args": [
+                "vet",
+                "--vettool=${workspaceFolder}/bin/mytool", // change here to your custom analyzer path
+                "."
+            ],
+            "condition": "$.fileExtname == '.go'"
+        }
+    ]
+}
