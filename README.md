@@ -79,7 +79,8 @@ format supports below placeholders
 
 ### Examples
 
-Please see [examples](./examples)
+Please see [examples][3]
 
 [1]:https://code.visualstudio.com/api/references/vscode-api#Diagnostic
 [2]:https://code.visualstudio.com/docs/editor/variables-reference
+[3]:https://github.com/tamayika/vscode-any-lint/tree/main/examples

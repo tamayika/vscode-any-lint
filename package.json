@@ -1,7 +1,17 @@
 {
   "name": "vscode-any-lint",
   "displayName": "any-lint",
-  "description": "",
+  "description": "VSCode Any Lint allows you to lint any files with any command line tools",
+  "author": {
+    "name": "tamayika",
+    "email": "tamayika40@gmail.com",
+    "url": "https://github.com/tamayika"
+  },
+  "homepage": "https://github.com/tamayika/vscode-any-lint",
+  "publisher": "tamayika",
+  "repository": {
+    "url": "https://github.com/tamayika/vscode-any-lint"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.52.0"
