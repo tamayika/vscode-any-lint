@@ -63,6 +63,7 @@ Example supposes following requirements.
 | lineZeroBased        | boolean |          | the reported diagnostic line is zero based or not. default is `false`                    |
 | columnZeroBased      | boolean |          | the reported diagnostic column is zero based or not. default is `false`                  |
 | columnCharacterBased | boolean |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes) |
+| severity             | string  |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                   |
 
 #### format
 

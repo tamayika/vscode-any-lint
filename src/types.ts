@@ -28,6 +28,12 @@ export enum DiagnosticType {
     lines = "lines"
 }
 
+export enum DiagnosticSeverity {
+    error = "error",
+    warning = "warning",
+    info = "info",
+    hint = "hint"
+}
 
 export interface DiagnosticConfiguration {
     output?: DiagnosticOutputType;
@@ -36,4 +42,5 @@ export interface DiagnosticConfiguration {
     lineZeroBased?: boolean;
     columnZeroBased?: boolean;
     columnCharacterBased?: boolean;
+    severity?: DiagnosticSeverity
 }

@@ -2,10 +2,10 @@ import * as vscode from "vscode";
 import * as cp from "child_process";
 import * as path from "path";
 import { Context } from "./context";
-import { DiagnosticConfiguration, DiagnosticOutputType, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
+import { DiagnosticConfiguration, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
 import { safeEval } from "./eval";
 import { byteBasedToCharacterBased, escapeRegexp } from "./util";
-import { Diagnostic } from "./diagnostic";
+import { Diagnostic, diagnosticSeverityMap } from "./diagnostic";
 
 const configurationKey = "any-lint";
 const configurationLintersKey = "linters";
@@ -105,6 +105,7 @@ export class Linter {
                 lineZeroBased: configuration.diagnostic?.lineZeroBased ?? false,
                 columnZeroBased: configuration.diagnostic?.columnZeroBased ?? false,
                 columnCharacterBased: configuration.diagnostic?.columnCharacterBased ?? false,
+                severity: configuration.diagnostic?.severity ?? DiagnosticSeverity.error,
             };
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
             this.lint(
@@ -205,7 +206,12 @@ export class Linter {
                     parseInt(endColumnString) - (diagnosticConfiguration.columnZeroBased ? 0 : 1)
                     : byteBasedToCharacterBased(document.lineAt(startLine).text, parseInt(endColumnString) - (diagnosticConfiguration.columnZeroBased ? 0 : 1))
                 : document.lineAt(startLine).text.length;
-            diagnostics.push(new Diagnostic(file, new vscode.Range(startLine, startColumn, endLine, endColumn), message, vscode.DiagnosticSeverity.Error));
+            diagnostics.push(new Diagnostic(
+                file,
+                new vscode.Range(startLine, startColumn, endLine, endColumn),
+                message,
+                diagnosticSeverityMap[diagnosticConfiguration.severity]
+            ));
         }
         return diagnostics;
     }
