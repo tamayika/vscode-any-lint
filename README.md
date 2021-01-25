@@ -18,17 +18,17 @@ VSCode Any Lint allows you to lint any files with any command line tools.
 | ---------- | ----------------------- | ------------------ | -------------------------------------------------------------------------------- |
 | name       | string                  | :heavy_check_mark: | the linter name. This is used for [Diagnostic.source][1].                        |
 | binPath    | string                  | :heavy_check_mark: | the command line tool path.                                                      |
-| args       | Array<string>           |                    | the command line tool arguments.                                                 |
+| args       | Array\<string\>         |                    | the command line tool arguments.                                                 |
 | cwd        | string                  |                    | the current working directory. default is file's directory.                      |
 | condition  | string                  |                    | if this JavaScript expression returns truthy value, linter starts.               |
-| on         | Array<string>           |                    | `change`: on file changed. `save`: on file saved.                                |
+| on         | Array\<string\>         |                    | `change`: on file changed. `save`: on file saved.                                |
 | disabled   | boolean                 |                    | force disable linting. this is usedful for debug when you have multiple linters. |
 | diagnostic | DiagnosticConfiguration |                    | the diagnostic configuration                                                     |
 
 #### condition
 
 You can write any javascript expression in condition.
-You can access below context by `$` variable like `$.file`. This is based [VSCode Variables Reference][2].
+You can access below context by `$` variable like `$.file`. This is based on [VSCode Variables Reference][2].
 
 Example supposes following requirements.
 
