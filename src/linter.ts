@@ -114,9 +114,6 @@ export class Linter {
                 diagnosticConfiguration.output,
                 cwd ,
             ).then(result => {
-                if (!result) {
-                    return;
-                }
                 this.outputChannel.appendLine(result);
                 const diagnostics = this.convertResultToDiagnostic(document, result, diagnosticConfiguration);
 
