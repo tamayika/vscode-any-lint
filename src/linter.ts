@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as cp from "child_process";
 import * as path from "path";
+import * as fs from "fs";
 import { Context } from "./context";
 import { DiagnosticConfiguration, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
 import { safeEval } from "./eval";
@@ -15,13 +16,21 @@ const diagnosticStartColumnKey = "startColumn";
 const diagnosticEndLineKey = "endLine";
 const diagnosticEndColumnKey = "endColumn";
 const diagnosticMessageKey = "message";
-const diagnosticKeys = [
-    diagnosticFileKey,
-    diagnosticStartLineKey,
-    diagnosticStartColumnKey,
-    diagnosticEndLineKey,
-    diagnosticEndColumnKey,
-    diagnosticMessageKey
+enum DiagnosticFormatKeyType {
+    string,
+    number,
+}
+interface DiagnosticFormatKey {
+    key: string;
+    type: DiagnosticFormatKeyType;
+}
+const diagnosticFormatKeys: DiagnosticFormatKey[] = [
+    { key: diagnosticFileKey, type: DiagnosticFormatKeyType.string },
+    { key: diagnosticStartLineKey, type: DiagnosticFormatKeyType.number },
+    { key: diagnosticStartColumnKey, type: DiagnosticFormatKeyType.number },
+    { key: diagnosticEndLineKey, type: DiagnosticFormatKeyType.number },
+    { key: diagnosticEndColumnKey, type: DiagnosticFormatKeyType.number },
+    { key: diagnosticMessageKey, type: DiagnosticFormatKeyType.string },
 ];
 const diagnosticDefaultFormat = `\${${diagnosticFileKey}}:\${${diagnosticStartLineKey}}:\${${diagnosticStartColumnKey}}: \${${diagnosticMessageKey}}`;
 
@@ -126,7 +135,16 @@ export class Linter {
                 const pathToDiagnostics: { [index: string]: Diagnostic[] } = {};
                 for (const diagnostic of diagnostics) {
                     diagnostic.source = configuration.name;
-                    const filePath = path.isAbsolute(diagnostic.file) ? diagnostic.file : path.resolve(cwd, diagnostic.file);
+                    let filePath = diagnostic.file;
+                    if (!path.isAbsolute(filePath)) {
+                        for (let i = 0; i < filePath.length; i++) {
+                            const resolvedPath = path.resolve(cwd, filePath.substr(i));
+                            if (fs.existsSync(resolvedPath)) {
+                                filePath = resolvedPath;
+                                break;
+                            }
+                        }
+                    }
                     pathToDiagnostics[filePath] ||= [];
                     pathToDiagnostics[filePath].push(diagnostic);
                 }
@@ -214,16 +232,16 @@ export class Linter {
     }
 
     private formatToRegexp(format: string): RegExp {
-        const patternRanges: { key: string, start: number, length: number }[] = [];
-        for (const diagnosticKey of diagnosticKeys) {
+        const patternRanges: (DiagnosticFormatKey & { start: number, length: number })[] = [];
+        for (const diagnosticFormatKey of diagnosticFormatKeys) {
             let position = 0;
             while (true) {
-                const index = format.indexOf(`\${${diagnosticKey}}`, position);
+                const index = format.indexOf(`\${${diagnosticFormatKey.key}}`, position);
                 if (index < 0) {
                     break;
                 }
-                patternRanges.push({ key: diagnosticKey, start: index, length: diagnosticKey.length + 3 });
-                position = index + diagnosticKey.length + 3;
+                patternRanges.push({ ...diagnosticFormatKey, start: index, length: diagnosticFormatKey.key.length + 3 });
+                position = index + diagnosticFormatKey.key.length + 3;
             }
         }
         patternRanges.sort((r1, r2) => r1.start - r2.start);
@@ -233,7 +251,8 @@ export class Linter {
             if (position < range.start) {
                 pattern += escapeRegexp(format.substring(position, range.start));
             }
-            pattern += `(?<${range.key}>.*)`;
+            const globPattern = range.type === DiagnosticFormatKeyType.string ? ".*" : "\\d+";
+            pattern += `(?<${range.key}>${globPattern})`;
             position = range.start + range.length;
         }
         if (position < format.length) {
