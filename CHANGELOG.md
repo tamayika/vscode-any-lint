@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.3]
+
+### Fixed
+
+- make format's regexp accurate and resolution of file path robust
+
 ## [0.0.2]
 
 ### Added
