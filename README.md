@@ -55,15 +55,17 @@ Example supposes following requirements.
 
 ### Diagnostic Configuration
 
-| Key                  | Type    | Required | Detail                                                                                   |
-| -------------------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
-| output               | string  |          | the output type. `stdout` or `stderr`. default is `stderr`                               |
-| type                 | string  |          | the output format type. `lines`. default is `lines`                                      |
-| format               | string  |          | the `lines` format option. default is `${file}:${startLine}:${startColumn}: ${message}`  |
-| lineZeroBased        | boolean |          | the reported diagnostic line is zero based or not. default is `false`                    |
-| columnZeroBased      | boolean |          | the reported diagnostic column is zero based or not. default is `false`                  |
-| columnCharacterBased | boolean |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes) |
-| severity             | string  |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                   |
+| Key                  | Type                | Required | Detail                                                                                   |
+| -------------------- | ------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| output               | string              |          | the output type. `stdout` or `stderr`. default is `stderr`                               |
+| type                 | string              |          | the output format type. `lines`, `json` or `yaml`. default is `lines`                    |
+| format               | string              |          | the `lines` format option. default is `${file}:${startLine}:${startColumn}: ${message}`  |
+| selectors            | DiagnosticSelectors |          | the `json` or `yaml` selectors option.                                                   |
+| lineZeroBased        | boolean             |          | the reported diagnostic line is zero based or not. default is `false`                    |
+| columnZeroBased      | boolean             |          | the reported diagnostic column is zero based or not. default is `false`                  |
+| columnCharacterBased | boolean             |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes) |
+| endColumnInclusive   | boolean             |          | the reported diagnostic end column is inclusive. default is `false` (i.e. exclusive)     |
+| severity             | string              |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                   |
 
 #### format
 
@@ -77,6 +79,52 @@ format supports below placeholders
 | endLine     |                    | the end line of diagnostic     |
 | endColumn   |                    | the end column of diagnostic   |
 | message     |                    | the message of diagnostic      |
+
+#### DiagnosticSelectors
+
+You can write any javascript expression as selector.
+You can access below context by `$` variable like `$.file`.
+
+| Key            | Required           | Detail                                                |
+| -------------- | ------------------ | ----------------------------------------------------- |
+| diagnostics    | :heavy_check_mark: | the diagnostics selector. result must be `Array`      |
+| file           | :heavy_check_mark: | the file path selector                                |
+| subDiagnostics |                    | the sub diagnostics selector.  result must be `Array` |
+| startLine      | :heavy_check_mark: | the start line selector                               |
+| startColumn    | :heavy_check_mark: | the start column selector                             |
+| endLine        |                    | the end line selector                                 |
+| endColumn      |                    | the end column selector                               |
+| message        |                    | the message selector                                  |
+
+```js
+// routine pseudo code
+diagnostics = []
+for (diagnostic of $[`diagnostics`]) {
+    file = diagnostic[`file`]
+    if (diagnostic[`subDiagnostics`]) {
+        for (subDiagnostic of diagnostic[`subDiagnostics`]) {
+            file = subDiangostic[`file`] || file
+            diagnostics.push(
+                file,
+                subDiangostic[`startLine`],
+                subDiangostic[`startColumn`],
+                subDiangostic[`endLine`],
+                subDiangostic[`endColumn`],
+                subDiangostic[`message`]
+            )
+        } 
+    } else {
+        diagnostics.push(
+            file,
+            diangostic[`startLine`],
+            diangostic[`startColumn`],
+            diangostic[`endLine`],
+            diangostic[`endColumn`],
+            diangostic[`message`]
+        )
+    }
+}
+```
 
 ### Examples
 

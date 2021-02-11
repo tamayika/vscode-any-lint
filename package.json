@@ -79,11 +79,48 @@
                   "type": {
                     "type": "string",
                     "enum": [
-                      "lines"
+                      "lines",
+                      "json",
+                      "yaml"
                     ]
                   },
                   "format": {
                     "type": "string"
+                  },
+                  "selectors": {
+                    "type": "object",
+                    "properties": {
+                      "diagnostics": {
+                        "type": "string"
+                      },
+                      "file": {
+                        "type": "string"
+                      },
+                      "subDiagnostics": {
+                        "type": "string"
+                      },
+                      "startLine": {
+                        "type": "string"
+                      },
+                      "startColumn": {
+                        "type": "string"
+                      },
+                      "endLine": {
+                        "type": "string"
+                      },
+                      "endColumn": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "diagnostics",
+                      "file",
+                      "startLine",
+                      "startColumn"
+                    ]
                   },
                   "lineZeroBased": {
                     "type": "boolean"
@@ -92,6 +129,9 @@
                     "type": "boolean"
                   },
                   "columnCharacterBased": {
+                    "type": "boolean"
+                  },
+                  "endColumnInclusive": {
                     "type": "boolean"
                   },
                   "severity": {
@@ -121,6 +161,7 @@
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
+    "@types/js-yaml": "^4.0.0",
     "@types/mocha": "^8.0.4",
     "@types/node": "^12.11.7",
     "@types/vscode": "^1.52.0",
@@ -129,6 +170,7 @@
     "eslint": "^7.18.0",
     "eslint-config-prettier": "^7.2.0",
     "glob": "^7.1.6",
+    "js-yaml": "^4.0.0",
     "mocha": "^8.1.3",
     "prettier": "^2.2.1",
     "typescript": "^4.1.3",

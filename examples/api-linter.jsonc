@@ -1,0 +1,32 @@
+{
+    "any-lint.linters": [
+        {
+            "name": "api-linter",
+            "binPath": "api-linter.exe",
+            "args": [
+                "${file}"
+            ],
+            "condition": "$.fileExtname == '.proto'",
+            "on": [
+                "save"
+            ],
+            "diagnostic": {
+                "output": "stdout",
+                "type": "yaml",
+                "selectors": {
+                    "diagnostics": "$",
+                    "file": "$.file_path",
+                    "subDiagnostics": "$.problems",
+                    "startLine": "$.location.start_position.line_number",
+                    "startColumn": "$.location.start_position.column_number",
+                    "endLine": "$.location.end_position.line_number",
+                    "endColumn": "$.location.end_position.column_number",
+                    "message": "$.message"
+                },
+                "lineZeroBased": false,
+                "columnZeroBased": false,
+                "endColumnInclusive": true
+            }
+        }
+    ]
+}

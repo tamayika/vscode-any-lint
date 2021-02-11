@@ -25,7 +25,9 @@ export enum DiagnosticOutputType {
 }
 
 export enum DiagnosticType {
-    lines = "lines"
+    lines = "lines",
+    json = "json",
+    yaml = "yaml"
 }
 
 export enum DiagnosticSeverity {
@@ -39,8 +41,21 @@ export interface DiagnosticConfiguration {
     output?: DiagnosticOutputType;
     type?: DiagnosticType;
     format?: string;
+    selectors?: DiagnosticSelectors;
     lineZeroBased?: boolean;
     columnZeroBased?: boolean;
     columnCharacterBased?: boolean;
+    endColumnInclusive?: boolean;
     severity?: DiagnosticSeverity
+}
+
+export interface DiagnosticSelectors {
+    diagnostics: string;
+    file: string;
+    subDiagnostics?: string;
+    startLine: string;
+    startColumn: string;
+    endLine?: string;
+    endColumn?: string;
+    message?: string;
 }

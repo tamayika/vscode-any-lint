@@ -5,34 +5,10 @@ import * as fs from "fs";
 import { Context } from "./context";
 import { DiagnosticConfiguration, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
 import { safeEval } from "./eval";
-import { byteBasedToCharacterBased, escapeRegexp } from "./util";
-import { Diagnostic, diagnosticSeverityMap } from "./diagnostic";
+import { convertResultToDiagnostic, Diagnostic, diagnosticDefaultFormat } from "./diagnostic";
 
 const configurationKey = "any-lint";
 const configurationLintersKey = "linters";
-const diagnosticFileKey = "file";
-const diagnosticStartLineKey = "startLine";
-const diagnosticStartColumnKey = "startColumn";
-const diagnosticEndLineKey = "endLine";
-const diagnosticEndColumnKey = "endColumn";
-const diagnosticMessageKey = "message";
-enum DiagnosticFormatKeyType {
-    string,
-    number,
-}
-interface DiagnosticFormatKey {
-    key: string;
-    type: DiagnosticFormatKeyType;
-}
-const diagnosticFormatKeys: DiagnosticFormatKey[] = [
-    { key: diagnosticFileKey, type: DiagnosticFormatKeyType.string },
-    { key: diagnosticStartLineKey, type: DiagnosticFormatKeyType.number },
-    { key: diagnosticStartColumnKey, type: DiagnosticFormatKeyType.number },
-    { key: diagnosticEndLineKey, type: DiagnosticFormatKeyType.number },
-    { key: diagnosticEndColumnKey, type: DiagnosticFormatKeyType.number },
-    { key: diagnosticMessageKey, type: DiagnosticFormatKeyType.string },
-];
-const diagnosticDefaultFormat = `\${${diagnosticFileKey}}:\${${diagnosticStartLineKey}}:\${${diagnosticStartColumnKey}}: \${${diagnosticMessageKey}}`;
 
 const debounceIntervals = {
     [Event.change]: 500,
@@ -111,9 +87,16 @@ export class Linter {
                 output: configuration.diagnostic?.output ?? DiagnosticOutputType.stderr,
                 type: configuration.diagnostic?.type ?? DiagnosticType.lines,
                 format: configuration.diagnostic?.format ?? diagnosticDefaultFormat,
+                selectors: configuration.diagnostic?.selectors ?? {
+                    diagnostics: "",
+                    file: "",
+                    startLine: "",
+                    startColumn: "",
+                },
                 lineZeroBased: configuration.diagnostic?.lineZeroBased ?? false,
                 columnZeroBased: configuration.diagnostic?.columnZeroBased ?? false,
                 columnCharacterBased: configuration.diagnostic?.columnCharacterBased ?? false,
+                endColumnInclusive: configuration.diagnostic?.endColumnInclusive ?? false,
                 severity: configuration.diagnostic?.severity ?? DiagnosticSeverity.error,
             };
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
@@ -124,7 +107,13 @@ export class Linter {
                 cwd ,
             ).then(result => {
                 this.outputChannel.appendLine(result);
-                const diagnostics = this.convertResultToDiagnostic(document, result, diagnosticConfiguration);
+                let diagnostics: Diagnostic[] = [];
+                try {
+                    diagnostics = convertResultToDiagnostic(document, result, diagnosticConfiguration);
+                } catch (e) {
+                    this.outputChannel.appendLine("failed to convert to diagnostic");
+                    this.outputChannel.appendLine(e);
+                }
 
                 let collections = this.diagnosticCollections[configuration.name];
                 if (!collections) {
@@ -185,79 +174,5 @@ export class Linter {
                 }
             });
         });
-    }
-
-    private convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>): Diagnostic[] {
-        let diagnosticStrings: string[] = [result];
-        switch (diagnosticConfiguration.type) {
-            case DiagnosticType.lines:
-                diagnosticStrings = result.trim().replace("\r\n", "\n").replace("\r", "\n").split("\n");
-                break;
-        }
-        const regexp = this.formatToRegexp(diagnosticConfiguration.format);
-        const diagnostics: Diagnostic[] = [];
-        for (const diagnosticString of diagnosticStrings) {
-            const match = diagnosticString.match(regexp);
-            if (!match || !match.groups) {
-                continue;
-            }
-            const file = match.groups[diagnosticFileKey];
-            const startLineString = match.groups[diagnosticStartLineKey];
-            const startColumnString = match.groups[diagnosticStartColumnKey];
-            const endLineString = match.groups[diagnosticEndLineKey];
-            const endColumnString = match.groups[diagnosticEndColumnKey];
-            const message = match.groups[diagnosticMessageKey];
-            if (!file || !startLineString || !startColumnString) {
-                continue;
-            }
-            const startLine = parseInt(startLineString) - (diagnosticConfiguration.lineZeroBased ? 0 : 1);
-            let startColumn = parseInt(startColumnString) - (diagnosticConfiguration.columnZeroBased ? 0 : 1);
-            if (!diagnosticConfiguration.columnCharacterBased) {
-                startColumn = byteBasedToCharacterBased(document.lineAt(startLine).text, startColumn);
-            }
-            const endLine = endLineString ? parseInt(endLineString) - (diagnosticConfiguration.lineZeroBased ? 0 : 1) : startLine;
-            const endColumn = endColumnString ?
-                diagnosticConfiguration.columnCharacterBased ?
-                    parseInt(endColumnString) - (diagnosticConfiguration.columnZeroBased ? 0 : 1)
-                    : byteBasedToCharacterBased(document.lineAt(startLine).text, parseInt(endColumnString) - (diagnosticConfiguration.columnZeroBased ? 0 : 1))
-                : document.lineAt(startLine).text.length;
-            diagnostics.push(new Diagnostic(
-                file,
-                new vscode.Range(startLine, startColumn, endLine, endColumn),
-                message,
-                diagnosticSeverityMap[diagnosticConfiguration.severity]
-            ));
-        }
-        return diagnostics;
-    }
-
-    private formatToRegexp(format: string): RegExp {
-        const patternRanges: (DiagnosticFormatKey & { start: number, length: number })[] = [];
-        for (const diagnosticFormatKey of diagnosticFormatKeys) {
-            let position = 0;
-            while (true) {
-                const index = format.indexOf(`\${${diagnosticFormatKey.key}}`, position);
-                if (index < 0) {
-                    break;
-                }
-                patternRanges.push({ ...diagnosticFormatKey, start: index, length: diagnosticFormatKey.key.length + 3 });
-                position = index + diagnosticFormatKey.key.length + 3;
-            }
-        }
-        patternRanges.sort((r1, r2) => r1.start - r2.start);
-        let position = 0;
-        let pattern = "";
-        for (const range of patternRanges) {
-            if (position < range.start) {
-                pattern += escapeRegexp(format.substring(position, range.start));
-            }
-            const globPattern = range.type === DiagnosticFormatKeyType.string ? ".*" : "\\d+";
-            pattern += `(?<${range.key}>${globPattern})`;
-            position = range.start + range.length;
-        }
-        if (position < format.length) {
-            pattern += escapeRegexp(format.substring(position));
-        }
-        return new RegExp(pattern);
     }
 }
