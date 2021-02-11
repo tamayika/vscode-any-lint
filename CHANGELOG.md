@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.4]
+
+### Added
+
+- JSON and YAML output
+
 ## [0.0.3]
 
 ### Fixed
