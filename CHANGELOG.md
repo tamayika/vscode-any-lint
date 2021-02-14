@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.5]
+
+### Added
+
+- Diagnostics code actions. Opening URI and inserting ignore comment.
+
 ## [0.0.4]
 
 ### Added
