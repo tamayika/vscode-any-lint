@@ -23,6 +23,25 @@
                     "endColumn": "$.location.end_position.column_number",
                     "message": "$.message"
                 },
+                "actions": [
+                    {
+                        "type": "openUri",
+                        "title": "`Open ${$$.rule_id} rule document page`",
+                        "uri": "$$.rule_doc_uri"
+                    },
+                    {
+                        "type": "ignore",
+                        "title": "`Ignore ${$$.rule_id} rule for entire file`",
+                        "comment": "`// (-- api-linter: ${$$.rule_id}=disabled --)`",
+                        "location": "startFile"
+                    },
+                    {
+                        "type": "ignore",
+                        "title": "`Ignore ${$$.rule_id} rule for next line`",
+                        "comment": "`// (-- api-linter: ${$$.rule_id}=disabled --)`",
+                        "location": "previousLine"
+                    }
+                ],
                 "lineZeroBased": false,
                 "columnZeroBased": false,
                 "endColumnInclusive": true

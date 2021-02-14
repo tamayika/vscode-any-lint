@@ -3,6 +3,7 @@ import * as YAML from "js-yaml";
 import { DiagnosticConfiguration, DiagnosticSeverity, DiagnosticType } from "./types";
 import { byteBasedToCharacterBased, escapeRegexp } from "./util";
 import { safeEval } from "./eval";
+import { Context } from "./context";
 
 const diagnosticFileKey = "file";
 const diagnosticStartLineKey = "startLine";
@@ -35,28 +36,42 @@ export const diagnosticSeverityMap = {
     [DiagnosticSeverity.hint]: vscode.DiagnosticSeverity.Hint,
 };
 
+export const diagnosticCode = "any-lint";
+
 export class Diagnostic extends vscode.Diagnostic {
     public file: string;
+    public diagnosticConfiguration: Required<DiagnosticConfiguration>;
+    public context: Context;
+    public rawData: unknown;
 
-    constructor(file: string, range: vscode.Range, message: string, severity: vscode.DiagnosticSeverity) {
+    constructor(file: string, range: vscode.Range, message: string, severity: vscode.DiagnosticSeverity,
+        diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context, rawData: unknown) {
         super(range, message, severity);
+        this.code = diagnosticCode;
+        this.diagnosticConfiguration = diagnosticConfiguration;
+        this.context = context;
         this.file = file;
+        this.rawData = rawData;
+    }
+
+    public get hasActions() {
+        return this.diagnosticConfiguration.actions.length > 0;
     }
 }
 
-export function convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>): Diagnostic[] {
+export function convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context): Diagnostic[] {
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
-            return convertResultToDiagnosticByLines(document, result, diagnosticConfiguration);
+            return convertResultToDiagnosticByLines(document, result, diagnosticConfiguration, context);
         case DiagnosticType.json:
-            return convertResultToDiagnosticByObject(document, JSON.parse(result), diagnosticConfiguration);
+            return convertResultToDiagnosticByObject(document, JSON.parse(result), diagnosticConfiguration, context);
         case DiagnosticType.yaml:
-            return convertResultToDiagnosticByObject(document, YAML.load(result), diagnosticConfiguration);
+            return convertResultToDiagnosticByObject(document, YAML.load(result), diagnosticConfiguration, context);
     }
     return [];
 }
 
-function convertResultToDiagnosticByLines(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>) {
+function convertResultToDiagnosticByLines(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context) {
     let diagnosticStrings: string[] = [result];
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
@@ -114,14 +129,17 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
             file,
             new vscode.Range(startLine, startColumn, endLine, endColumn),
             message,
-            diagnosticSeverityMap[diagnosticConfiguration.severity]
+            diagnosticSeverityMap[diagnosticConfiguration.severity],
+            diagnosticConfiguration,
+            context,
+            {},
         ));
     }
     return diagnostics;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfiguration>) {
+function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context) {
     const diagnostics: Diagnostic[] = [];
     const selectors = diagnosticConfiguration.selectors;
     if (!selectors.diagnostics || !selectors.file || !selectors.startLine || !selectors.startColumn) {
@@ -142,13 +160,13 @@ function convertResultToDiagnosticByObject(document: vscode.TextDocument, result
                 continue;
             }
             for (const subResultDiagnostic of subResultDiagnostics) {
-                const diagnostic = convertDiagnosticObject(document, subResultDiagnostic, diagnosticConfiguration, file);
+                const diagnostic = convertDiagnosticObject(document, subResultDiagnostic, diagnosticConfiguration, context, file);
                 if (diagnostic) {
                     diagnostics.push(diagnostic);
                 }
             }
         } else {
-            const diagnostic = convertDiagnosticObject(document, resultDiagnostic, diagnosticConfiguration, file);
+            const diagnostic = convertDiagnosticObject(document, resultDiagnostic, diagnosticConfiguration, context, file);
             if (diagnostic) {
                 diagnostics.push(diagnostic);
             }
@@ -158,7 +176,7 @@ function convertResultToDiagnosticByObject(document: vscode.TextDocument, result
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfiguration>, parentFile: string) {
+function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context, parentFile: string) {
     const selectors = diagnosticConfiguration.selectors;
     const file = safeEval(selectors.file, result) || parentFile;
     if (!file) {
@@ -212,7 +230,10 @@ function convertDiagnosticObject(document: vscode.TextDocument, result: any, dia
         file,
         new vscode.Range(startLine, startColumn, endLine, endColumn),
         message,
-        diagnosticSeverityMap[diagnosticConfiguration.severity]
+        diagnosticSeverityMap[diagnosticConfiguration.severity],
+        diagnosticConfiguration,
+        context,
+        result
     );
 }
 

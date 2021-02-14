@@ -98,6 +98,7 @@ export class Linter {
                 columnCharacterBased: configuration.diagnostic?.columnCharacterBased ?? false,
                 endColumnInclusive: configuration.diagnostic?.endColumnInclusive ?? false,
                 severity: configuration.diagnostic?.severity ?? DiagnosticSeverity.error,
+                actions: configuration.diagnostic?.actions ?? [],
             };
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
             this.lint(
@@ -109,7 +110,7 @@ export class Linter {
                 this.outputChannel.appendLine(result);
                 let diagnostics: Diagnostic[] = [];
                 try {
-                    diagnostics = convertResultToDiagnostic(document, result, diagnosticConfiguration);
+                    diagnostics = convertResultToDiagnostic(document, result, diagnosticConfiguration, context);
                 } catch (e) {
                     this.outputChannel.appendLine("failed to convert to diagnostic");
                     this.outputChannel.appendLine(e);

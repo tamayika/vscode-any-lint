@@ -46,7 +46,8 @@ export interface DiagnosticConfiguration {
     columnZeroBased?: boolean;
     columnCharacterBased?: boolean;
     endColumnInclusive?: boolean;
-    severity?: DiagnosticSeverity
+    severity?: DiagnosticSeverity;
+    actions?: DiagnosticAction[];
 }
 
 export interface DiagnosticSelectors {
@@ -58,4 +59,24 @@ export interface DiagnosticSelectors {
     endLine?: string;
     endColumn?: string;
     message?: string;
+}
+
+export enum DiagnosticActionType {
+    openUri = "openUri",
+    ignore = "ignore",
+}
+
+export enum DiagnosticCommentLocation {
+    startFile = "startFile",
+    previousLine = "previousLine",
+    currentLine = "currentLine",
+    nextLine = "nextLine",
+}
+
+export interface DiagnosticAction {
+    type: DiagnosticActionType;
+    title: string;
+    uri: string;
+    comment: string;
+    location?: DiagnosticCommentLocation
 }

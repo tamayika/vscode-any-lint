@@ -4,3 +4,8 @@ import { Context } from "./context";
 export function safeEval(code: string, $: Context) {
     return eval(code);
 }
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
+    return eval(code);
+}

@@ -27,7 +27,7 @@ VSCode Any Lint allows you to lint any files with any command line tools.
 
 #### condition
 
-You can write any javascript expression in condition.
+You can write any JavaScript expression in condition.
 You can access below context by `$` variable like `$.file`. This is based on [VSCode Variables Reference][2].
 
 Example supposes following requirements.
@@ -55,17 +55,18 @@ Example supposes following requirements.
 
 ### Diagnostic Configuration
 
-| Key                  | Type                | Required | Detail                                                                                   |
-| -------------------- | ------------------- | -------- | ---------------------------------------------------------------------------------------- |
-| output               | string              |          | the output type. `stdout` or `stderr`. default is `stderr`                               |
-| type                 | string              |          | the output format type. `lines`, `json` or `yaml`. default is `lines`                    |
-| format               | string              |          | the `lines` format option. default is `${file}:${startLine}:${startColumn}: ${message}`  |
-| selectors            | DiagnosticSelectors |          | the `json` or `yaml` selectors option.                                                   |
-| lineZeroBased        | boolean             |          | the reported diagnostic line is zero based or not. default is `false`                    |
-| columnZeroBased      | boolean             |          | the reported diagnostic column is zero based or not. default is `false`                  |
-| columnCharacterBased | boolean             |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes) |
-| endColumnInclusive   | boolean             |          | the reported diagnostic end column is inclusive. default is `false` (i.e. exclusive)     |
-| severity             | string              |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                   |
+| Key                  | Type                      | Required | Detail                                                                                   |
+| -------------------- | ------------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| output               | string                    |          | the output type. `stdout` or `stderr`. default is `stderr`                               |
+| type                 | string                    |          | the output format type. `lines`, `json` or `yaml`. default is `lines`                    |
+| format               | string                    |          | the `lines` format option. default is `${file}:${startLine}:${startColumn}: ${message}`  |
+| selectors            | DiagnosticSelectors       |          | the `json` or `yaml` selectors option.                                                   |
+| lineZeroBased        | boolean                   |          | the reported diagnostic line is zero based or not. default is `false`                    |
+| columnZeroBased      | boolean                   |          | the reported diagnostic column is zero based or not. default is `false`                  |
+| columnCharacterBased | boolean                   |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes) |
+| endColumnInclusive   | boolean                   |          | the reported diagnostic end column is inclusive. default is `false` (i.e. exclusive)     |
+| severity             | string                    |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                   |
+| actions              | Array\<DiagnosticAction\> |          | the code actions.                                                                        |
 
 #### format
 
@@ -82,19 +83,19 @@ format supports below placeholders
 
 #### DiagnosticSelectors
 
-You can write any javascript expression as selector.
+You can write any JavaScript expression as selector.
 You can access below context by `$` variable like `$.file`.
 
-| Key            | Required           | Detail                                                |
-| -------------- | ------------------ | ----------------------------------------------------- |
-| diagnostics    | :heavy_check_mark: | the diagnostics selector. result must be `Array`      |
-| file           | :heavy_check_mark: | the file path selector                                |
-| subDiagnostics |                    | the sub diagnostics selector.  result must be `Array` |
-| startLine      | :heavy_check_mark: | the start line selector                               |
-| startColumn    | :heavy_check_mark: | the start column selector                             |
-| endLine        |                    | the end line selector                                 |
-| endColumn      |                    | the end column selector                               |
-| message        |                    | the message selector                                  |
+| Key            | Required           | Detail                                               |
+| -------------- | ------------------ | ---------------------------------------------------- |
+| diagnostics    | :heavy_check_mark: | the diagnostics selector. result must be `Array`     |
+| file           | :heavy_check_mark: | the file path selector. result must be `string`      |
+| subDiagnostics |                    | the sub diagnostics selector. result must be `Array` |
+| startLine      | :heavy_check_mark: | the start line selector. result must be `number`     |
+| startColumn    | :heavy_check_mark: | the start column selector. result must be `number`   |
+| endLine        |                    | the end line selector. result must be `number`       |
+| endColumn      |                    | the end column selector. result must be `number`     |
+| message        |                    | the message selector. result must be `string`        |
 
 ```js
 // routine pseudo code
@@ -124,6 +125,36 @@ for (diagnostic of $[`diagnostics`]) {
         )
     }
 }
+```
+
+#### DiagnosticAction
+
+This is code action setting for diagnostic. There are several types supported
+
+* `openUri`: this is for opening lint rule documentation
+* `ignore`: this is for inserting ignore rule comment
+
+You can use two variables in configurations which support JavaScript expression.
+
+* `$`: the same as `condition` setting
+* `$$`: the reported diagnostic object. When you specify `subDiagnostics` selector, this is sub diagnostic.
+
+| Key      | Type   | Required           | Detail                                                                                                                           |
+| -------- | ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| type     | string | :heavy_check_mark: | `openUri` or `ignore`                                                                                                            |
+| title    | string | :heavy_check_mark: | the title of code action. JavaScript expression. result must be `string`                                                         |
+| uri      | string |                    | the opening uri for `openUri`. JavaScript expression. result must be `string`                                                    |
+| comment  | string |                    | the inserting comment for `ignore`. JavaScript expression. result must be `string`                                               |
+| location | string |                    | the inserting comment location for `ignore`. `startFile`, `previousLine`, `currentLine` or `nextLine`. default is `previousLine` |
+
+Please see below example for comment location.
+
+```js
+// startLine
+
+// previousLine
+foo // currentLine
+// nextLine
 ```
 
 ### Examples

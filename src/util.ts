@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 export function escapeRegexp(source: string): string {
     return source.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
 }
@@ -12,4 +14,14 @@ export function byteBasedToCharacterBased(text: string, offset: number): number 
         }
     }
     return text.length;
+}
+
+export function getDocumentEol(document: vscode.TextDocument) {
+    switch (document.eol) {
+        case vscode.EndOfLine.CRLF:
+            return "\r\n";
+        case vscode.EndOfLine.LF:
+            return "\n";
+    }
+    return "\n";
 }
