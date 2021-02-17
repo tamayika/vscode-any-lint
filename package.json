@@ -9,6 +9,7 @@
   },
   "homepage": "https://github.com/tamayika/vscode-any-lint",
   "publisher": "tamayika",
+	"icon": "any-lint-icon.png",
   "repository": {
     "url": "https://github.com/tamayika/vscode-any-lint"
   },
