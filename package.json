@@ -9,7 +9,7 @@
   },
   "homepage": "https://github.com/tamayika/vscode-any-lint",
   "publisher": "tamayika",
-	"icon": "any-lint-icon.png",
+  "icon": "any-lint-icon.png",
   "repository": {
     "url": "https://github.com/tamayika/vscode-any-lint"
   },
@@ -153,10 +153,14 @@
                           "type": "string",
                           "enum": [
                             "openUri",
-                            "ignore"
+                            "ignore",
+                            "run"
                           ]
                         },
                         "title": {
+                          "type": "string"
+                        },
+                        "condition": {
                           "type": "string"
                         },
                         "uri": {
@@ -173,6 +177,21 @@
                             "currentLine",
                             "nextLine"
                           ]
+                        },
+                        "binPath": {
+                          "type": "string"
+                        },
+                        "args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "cwd": {
+                          "type": "string"
+                        },
+                        "lintAfterRun": {
+                          "type": "string"
                         }
                       }
                     }

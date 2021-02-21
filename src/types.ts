@@ -5,6 +5,7 @@ export interface IDisposable {
 export enum Event {
     change = "change",
     save = "save",
+    force = "force",
 }
 
 
@@ -37,11 +38,9 @@ export enum DiagnosticSeverity {
     hint = "hint"
 }
 
-export interface DiagnosticConfiguration {
-    output?: DiagnosticOutputType;
+interface DiagnosticConfigurationBase {
     type?: DiagnosticType;
-    format?: string;
-    selectors?: DiagnosticSelectors;
+    output?: DiagnosticOutputType;
     lineZeroBased?: boolean;
     columnZeroBased?: boolean;
     columnCharacterBased?: boolean;
@@ -49,6 +48,23 @@ export interface DiagnosticConfiguration {
     severity?: DiagnosticSeverity;
     actions?: DiagnosticAction[];
 }
+
+export type DiagnosticConfiguration = DiagnosticConfigurationLines | DiagnosticConfigurationJSON | DiagnosticConfigurationYAML;
+
+export type DiagnosticConfigurationLines = DiagnosticConfigurationBase & {
+    type: DiagnosticType.lines
+    format?: string;
+};
+
+export type DiagnosticConfigurationJSON = DiagnosticConfigurationBase & {
+    type: DiagnosticType.json;
+    selectors?: DiagnosticSelectors;
+};
+
+export type DiagnosticConfigurationYAML = DiagnosticConfigurationBase & {
+    type: DiagnosticType.yaml;
+    selectors?: DiagnosticSelectors;
+};
 
 export interface DiagnosticSelectors {
     diagnostics: string;
@@ -64,6 +80,7 @@ export interface DiagnosticSelectors {
 export enum DiagnosticActionType {
     openUri = "openUri",
     ignore = "ignore",
+    run = "run",
 }
 
 export enum DiagnosticCommentLocation {
@@ -73,10 +90,29 @@ export enum DiagnosticCommentLocation {
     nextLine = "nextLine",
 }
 
-export interface DiagnosticAction {
+interface DiagnosticActionBase {
     type: DiagnosticActionType;
     title: string;
+    condition?: string;
+}
+
+export type DiagnosticAction = DiagnosticActionOpenUri | DiagnosticActionIgnore | DiagnosticActionRun;
+
+export type DiagnosticActionOpenUri = DiagnosticActionBase & {
+    type: DiagnosticActionType.openUri;
     uri: string;
+};
+
+export type DiagnosticActionIgnore = DiagnosticActionBase & {
+    type: DiagnosticActionType.ignore;
     comment: string;
     location?: DiagnosticCommentLocation
-}
+};
+
+export type DiagnosticActionRun = DiagnosticActionBase & {
+    type: DiagnosticActionType.run;
+    binPath?: string;
+    args?: string[];
+    cwd?: string;
+    lintAfterRun?: string
+};

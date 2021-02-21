@@ -133,19 +133,32 @@ This is code action setting for diagnostic. There are several types supported
 
 * `openUri`: this is for opening lint rule documentation
 * `ignore`: this is for inserting ignore rule comment
+* `run`: this is for running command to auto fix errors
 
 You can use two variables in configurations which support JavaScript expression.
 
 * `$`: the same as `condition` setting
 * `$$`: the reported diagnostic object. When you specify `subDiagnostics` selector, this is sub diagnostic.
 
-| Key      | Type   | Required           | Detail                                                                                                                           |
-| -------- | ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| type     | string | :heavy_check_mark: | `openUri` or `ignore`                                                                                                            |
-| title    | string | :heavy_check_mark: | the title of code action. JavaScript expression. result must be `string`                                                         |
-| uri      | string |                    | the opening uri for `openUri`. JavaScript expression. result must be `string`                                                    |
-| comment  | string |                    | the inserting comment for `ignore`. JavaScript expression. result must be `string`                                               |
-| location | string |                    | the inserting comment location for `ignore`. `startFile`, `previousLine`, `currentLine` or `nextLine`. default is `previousLine` |
+
+##### Common Configuration
+
+| Key   | Type   | Required           | Detail                                                                   |
+| ----- | ------ | ------------------ | ------------------------------------------------------------------------ |
+| type  | string | :heavy_check_mark: | `openUri` or `ignore` or `run`                                           |
+| title | string | :heavy_check_mark: | the title of code action. JavaScript expression. result must be `string` |
+
+##### `openUri`
+
+| Key | Type | Required | Detail |
+| --- | ---- | -------- | ------ |
+
+##### `ignore`
+
+| Key      | Type   | Required | Detail                                                                                                                           |
+| -------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| comment  | string |          | the inserting comment for `ignore`. JavaScript expression. result must be `string`                                               |
+| location | string |          | the inserting comment location for `ignore`. `startFile`, `previousLine`, `currentLine` or `nextLine`. default is `previousLine` |
 
 Please see below example for comment location.
 
@@ -156,6 +169,15 @@ Please see below example for comment location.
 foo // currentLine
 // nextLine
 ```
+
+##### `run`
+
+| Key          | Type            | Required           | Detail                                                                                                       |
+| ------------ | --------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| binPath      | string          | :heavy_check_mark: | the running command line tool path. JavaScript expression. result must be `string`                           |
+| args         | Array\<string\> |                    | the running command line tool arguments. JavaScript expressions. result must be `Array<string>`              |
+| cwd          | string          |                    | the current working directory. JavaScript expression. result must be `string`. default is file's directory.  |
+| lintAfterRun | string          |                    | after running command line tool, lint again for the reported file. JavaScript expression. default is `false` |
 
 ### Examples
 

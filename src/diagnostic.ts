@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as YAML from "js-yaml";
-import { DiagnosticConfiguration, DiagnosticSeverity, DiagnosticType } from "./types";
+import { DiagnosticConfiguration, DiagnosticConfigurationJSON, DiagnosticConfigurationLines, DiagnosticConfigurationYAML, DiagnosticSeverity, DiagnosticType } from "./types";
 import { byteBasedToCharacterBased, escapeRegexp } from "./util";
 import { safeEval } from "./eval";
 import { Context } from "./context";
@@ -71,7 +71,7 @@ export function convertResultToDiagnostic(document: vscode.TextDocument, result:
     return [];
 }
 
-function convertResultToDiagnosticByLines(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context) {
+function convertResultToDiagnosticByLines(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfigurationLines>, context: Context) {
     let diagnosticStrings: string[] = [result];
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
@@ -139,7 +139,7 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context) {
+function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context) {
     const diagnostics: Diagnostic[] = [];
     const selectors = diagnosticConfiguration.selectors;
     if (!selectors.diagnostics || !selectors.file || !selectors.startLine || !selectors.startColumn) {
@@ -176,7 +176,7 @@ function convertResultToDiagnosticByObject(document: vscode.TextDocument, result
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context, parentFile: string) {
+function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context, parentFile: string) {
     const selectors = diagnosticConfiguration.selectors;
     const file = safeEval(selectors.file, result) || parentFile;
     if (!file) {

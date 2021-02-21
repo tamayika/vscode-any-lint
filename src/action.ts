@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { ignoreCommand, openUriCommand } from "./command";
+import { ignoreCommand, openUriCommand, runCommand } from "./command";
 import { Diagnostic, diagnosticCode } from "./diagnostic";
 import { safeEvalDiagnosticAction } from "./eval";
-import { DiagnosticAction, DiagnosticActionType, DiagnosticCommentLocation } from "./types";
+import { DiagnosticAction, DiagnosticActionIgnore, DiagnosticActionOpenUri, DiagnosticActionRun, DiagnosticActionType, DiagnosticCommentLocation } from "./types";
 import { getDocumentEol } from "./util";
 
 
@@ -33,15 +33,22 @@ export class AnyAction implements vscode.CodeActionProvider {
     }
 
     private createCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticAction) {
+        if (diagnosticAction.condition) {
+            if (!this.safeEval(diagnosticAction.condition, diagnostic)) {
+                return;
+            }
+        }
         switch (diagnosticAction.type) {
             case DiagnosticActionType.openUri:
                 return this.createOpenUriCodeAction(diagnostic, diagnosticAction);
             case DiagnosticActionType.ignore:
                 return this.createIgnoreCodeAction(document, diagnostic, diagnosticAction);
+            case DiagnosticActionType.run:
+                return this.createRunCodeAction(document, diagnostic, diagnosticAction);
         }
     }
 
-    private createOpenUriCodeAction(diagnostic: Diagnostic, diagnosticAction: DiagnosticAction) {
+    private createOpenUriCodeAction(diagnostic: Diagnostic, diagnosticAction: DiagnosticActionOpenUri) {
         const title = this.safeEval(diagnosticAction.title, diagnostic);
         if (title === undefined) {
             return;
@@ -61,7 +68,7 @@ export class AnyAction implements vscode.CodeActionProvider {
         return action;
     }
 
-    private createIgnoreCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticAction) {
+    private createIgnoreCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticActionIgnore) {
         const title = this.safeEval(diagnosticAction.title, diagnostic);
         if (title === undefined || typeof title !== "string") {
             return;
@@ -120,6 +127,33 @@ export class AnyAction implements vscode.CodeActionProvider {
                 document.uri.toString(),
                 comment,
                 location,
+            ]
+        };
+        return action;
+    }
+
+    private createRunCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticActionRun) {
+        const title = this.safeEval(diagnosticAction.title, diagnostic);
+        if (title === undefined || typeof title !== "string") {
+            return;
+        }
+        if (!diagnosticAction.binPath) {
+            return;
+        }
+        const binPath = this.safeEval(diagnosticAction.binPath, diagnostic);
+        const action = new vscode.CodeAction(title);
+        const args = (diagnosticAction.args ?? []).map(_ => this.safeEval(_, diagnostic)).filter(_ => !!_);
+        const cwd = diagnosticAction.cwd ? this.safeEval(diagnosticAction.cwd, diagnostic) : diagnostic.context.cwd;
+        const lintAfterRun = diagnosticAction.lintAfterRun ? this.safeEval(diagnosticAction.lintAfterRun, diagnostic) : false;
+        action.command = {
+            title,
+            command: runCommand,
+            arguments: [
+                document.uri.toString(),
+                binPath,
+                args,
+                cwd,
+                lintAfterRun
             ]
         };
         return action;

@@ -1,0 +1,48 @@
+{
+    "any-lint.linters": [
+        {
+            "name": "eslint",
+            "binPath": "npx.cmd",
+            "args": [
+                "--silent",
+                "eslint",
+                "-f",
+                "json",
+                "${file}"
+            ],
+            "condition": "$.fileExtname == '.js'",
+            "on": [
+                "save"
+            ],
+            "diagnostic": {
+                "output": "stdout",
+                "type": "json",
+                "selectors": {
+                    "diagnostics": "$",
+                    "file": "$.filePath",
+                    "subDiagnostics": "$.messages",
+                    "startLine": "$.line",
+                    "startColumn": "$.column",
+                    "endLine": "$.endLine",
+                    "endColumn": "$.endColumn",
+                    "message": "$.message"
+                },
+                "actions": [
+                    {
+                        "type": "run",
+                        "title": "`Fix all fixable problems`",
+                        "binPath": "`npx.cmd`",
+                        "args": [
+                            "`--silent`",
+                            "`eslint`",
+                            "`--fix`",
+                            "$.file"
+                        ],
+                        "condition": "$$.fix",
+                        "lintAfterRun": "true"
+                    }
+                ]
+            }
+        }
+    ]
+}

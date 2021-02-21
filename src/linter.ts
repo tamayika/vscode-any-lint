@@ -3,7 +3,7 @@ import * as cp from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 import { Context } from "./context";
-import { DiagnosticConfiguration, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
+import { DiagnosticConfiguration, DiagnosticConfigurationLines, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
 import { safeEval } from "./eval";
 import { convertResultToDiagnostic, Diagnostic, diagnosticDefaultFormat } from "./diagnostic";
 
@@ -12,7 +12,8 @@ const configurationLintersKey = "linters";
 
 const debounceIntervals = {
     [Event.change]: 500,
-    [Event.save]: 0
+    [Event.save]: 0,
+    [Event.force]: 0
 };
 
 export class Linter {
@@ -52,6 +53,14 @@ export class Linter {
         this.diagnosticCollections = {};
     }
 
+    public lintDocumentByUri(uri: string) {
+        const document = vscode.workspace.textDocuments.find(_ => _.uri.toString() === uri);
+        if (!document) {
+            return;
+        }
+        this.lintDocument(document, Event.force);
+    }
+
     private lintDocument(document: vscode.TextDocument, event: Event) {
         const selection = vscode.window.activeTextEditor?.selection ?? new vscode.Selection(0, 0, 0, 0);
         const context = new Context(document, selection);
@@ -64,7 +73,7 @@ export class Linter {
     private lintDocumentImpl(document: vscode.TextDocument, context: Context, event: Event) {
         const configurations = vscode.workspace.getConfiguration(configurationKey, null).get<LinterConfiguration[]>(configurationLintersKey) || [];
         for (const configuration of configurations) {
-            if (!(configuration.on || [Event.save]).some(_ => _ === event)) {
+            if (!(configuration.on || [Event.save]).some(_ => _ === event) && event !== Event.force) {
                 continue;
             }
             if (configuration.disabled) {
@@ -83,34 +92,62 @@ export class Linter {
                     this.outputChannel.appendLine(e);
                 }
             }
-            const diagnosticConfiguration: Required<DiagnosticConfiguration> = {
-                output: configuration.diagnostic?.output ?? DiagnosticOutputType.stderr,
-                type: configuration.diagnostic?.type ?? DiagnosticType.lines,
-                format: configuration.diagnostic?.format ?? diagnosticDefaultFormat,
-                selectors: configuration.diagnostic?.selectors ?? {
-                    diagnostics: "",
-                    file: "",
-                    startLine: "",
-                    startColumn: "",
-                },
-                lineZeroBased: configuration.diagnostic?.lineZeroBased ?? false,
-                columnZeroBased: configuration.diagnostic?.columnZeroBased ?? false,
-                columnCharacterBased: configuration.diagnostic?.columnCharacterBased ?? false,
-                endColumnInclusive: configuration.diagnostic?.endColumnInclusive ?? false,
-                severity: configuration.diagnostic?.severity ?? DiagnosticSeverity.error,
-                actions: configuration.diagnostic?.actions ?? [],
+            const diagnosticConfiguration = configuration.diagnostic;
+            const commonDiagnosticConfiguration = {
+                output: diagnosticConfiguration?.output ?? DiagnosticOutputType.stderr,
+                lineZeroBased: diagnosticConfiguration?.lineZeroBased ?? false,
+                columnZeroBased: diagnosticConfiguration?.columnZeroBased ?? false,
+                columnCharacterBased: diagnosticConfiguration?.columnCharacterBased ?? false,
+                endColumnInclusive: diagnosticConfiguration?.endColumnInclusive ?? false,
+                severity: diagnosticConfiguration?.severity ?? DiagnosticSeverity.error,
+                actions: diagnosticConfiguration?.actions ?? [],
             };
+            let requiredDiagnosticConfiguration: Required<DiagnosticConfiguration>;
+            switch (diagnosticConfiguration?.type) {
+                case DiagnosticType.json:
+                    requiredDiagnosticConfiguration = {
+                        ...commonDiagnosticConfiguration,
+                        type: DiagnosticType.json,
+                        selectors: diagnosticConfiguration?.selectors ?? {
+                            diagnostics: "",
+                            file: "",
+                            startLine: "",
+                            startColumn: "",
+                        },
+                    };
+                    break;
+                case DiagnosticType.yaml:
+                    requiredDiagnosticConfiguration = {
+                        ...commonDiagnosticConfiguration,
+                        type: DiagnosticType.yaml,
+                        selectors: diagnosticConfiguration?.selectors ?? {
+                            diagnostics: "",
+                            file: "",
+                            startLine: "",
+                            startColumn: "",
+                        },
+                    };
+                    break;
+                case DiagnosticType.lines:
+                default:
+                    requiredDiagnosticConfiguration = {
+                        ...commonDiagnosticConfiguration,
+                        type: DiagnosticType.lines,
+                        format: (diagnosticConfiguration as DiagnosticConfigurationLines)?.format ?? diagnosticDefaultFormat,
+                    };
+                    break;
+            }
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
             this.lint(
                 context.substitute(configuration.binPath),
                 (configuration.args || []).map(_ => context.substitute(_)),
-                diagnosticConfiguration.output,
+                requiredDiagnosticConfiguration.output,
                 cwd ,
             ).then(result => {
                 this.outputChannel.appendLine(result);
                 let diagnostics: Diagnostic[] = [];
                 try {
-                    diagnostics = convertResultToDiagnostic(document, result, diagnosticConfiguration, context);
+                    diagnostics = convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
                 } catch (e) {
                     this.outputChannel.appendLine("failed to convert to diagnostic");
                     this.outputChannel.appendLine(e);
