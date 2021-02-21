@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.8]
+
+### Added
+
+- Run code action
+
 ## [0.0.7]
 
 ### Added
