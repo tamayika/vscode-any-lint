@@ -54,7 +54,7 @@ export class AnyAction implements vscode.CodeActionProvider {
             return;
         }
         const uri = this.safeEval(diagnosticAction.uri, diagnostic);
-        if (title === undefined) {
+        if (uri === undefined) {
             return;
         }
         const action = new vscode.CodeAction(title);

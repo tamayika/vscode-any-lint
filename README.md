@@ -150,8 +150,9 @@ You can use two variables in configurations which support JavaScript expression.
 
 ##### `openUri`
 
-| Key | Type | Required | Detail |
-| --- | ---- | -------- | ------ |
+| Key | Type   | Required           | Detail                                                                        |
+| --- | ------ | ------------------ | ----------------------------------------------------------------------------- |
+| uri | string | :heavy_check_mark: | the opening uri for `openUri`. JavaScript expression. result must be `string` |
 
 ##### `ignore`
 
