@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.9]
+
+### Fixed
+
+- `oepnUri` command was valid even if `uri` is undefined
+
 ## [0.0.8]
 
 ### Added
