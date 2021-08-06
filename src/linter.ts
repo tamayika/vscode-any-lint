@@ -139,10 +139,12 @@ export class Linter {
             }
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
             this.lint(
+                document,
                 context.substitute(configuration.binPath),
                 (configuration.args || []).map(_ => context.substitute(_)),
                 requiredDiagnosticConfiguration.output,
-                cwd ,
+                cwd,
+                event,
             ).then(result => {
                 this.outputChannel.appendLine(result);
                 let diagnostics: Diagnostic[] = [];
@@ -182,14 +184,14 @@ export class Linter {
         }
     }
 
-    private lint(binPath: string, args: string[], outputType: DiagnosticOutputType, cwd?: string): Promise<string> {
+    private lint(document: vscode.TextDocument, binPath: string, args: string[], outputType: DiagnosticOutputType, cwd: string, event: Event): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             const command = [binPath, ...args].join(" ");
             if (cwd) {
                 this.outputChannel.appendLine(cwd);
             }
             this.outputChannel.appendLine(command);
-            cp.execFile(binPath, args, { cwd: cwd }, (err, stdout, stderr) => {
+            const handleResult = (err: Error | undefined, stdout: string, stderr: string) => {
                 try {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     if (err && (<any>err).code === 'ENOENT') {
@@ -210,7 +212,25 @@ export class Linter {
                 } catch (e) {
                     reject(e);
                 }
-            });
+            };
+            if (event === Event.change) {
+                const child = cp.spawn(binPath, args, { cwd: cwd });
+                let err: Error | undefined;
+                let stdout = "";
+                let stderr = "";
+                child.stdout.on("data", (data) => stdout += data.toString());
+                child.stderr.on("data", (data) => stderr += data.toString());
+                child.stdin.write(document.getText());
+                child.stdin.end();
+                child.on("error", (e) => err = e);
+                child.on("close", () => {
+                    handleResult(err, stdout, stderr);
+                });
+            } else {
+                cp.execFile(binPath, args, { cwd: cwd }, (err, stdout, stderr) => {
+                    handleResult(err === null ? undefined : err, stdout, stderr);
+                });
+            }
         });
     }
 }

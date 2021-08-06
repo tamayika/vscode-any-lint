@@ -25,6 +25,8 @@ VSCode Any Lint allows you to lint any files with any command line tools.
 | disabled   | boolean                 |                    | force disable linting. this is usedful for debug when you have multiple linters. |
 | diagnostic | DiagnosticConfiguration |                    | the diagnostic configuration                                                     |
 
+When `change` is used for `on`, current editing buffer is passed to spawned process by `STDIN`.
+
 #### condition
 
 You can write any JavaScript expression in condition.
