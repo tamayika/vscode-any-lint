@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.1.0]
+
+### Breaking
+
+- When `change` is used for `on`, current editing buffer is passed to spawned process by `STDIN`
+
 ## [0.0.9]
 
 ### Fixed
