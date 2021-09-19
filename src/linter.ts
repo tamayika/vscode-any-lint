@@ -89,7 +89,7 @@ export class Linter {
                     }
                 } catch (e) {
                     console.log(e);
-                    this.outputChannel.appendLine(e);
+                    this.appendErrorToOutputChannel(e);
                 }
             }
             const diagnosticConfiguration = configuration.diagnostic;
@@ -152,7 +152,7 @@ export class Linter {
                     diagnostics = convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
                 } catch (e) {
                     this.outputChannel.appendLine("failed to convert to diagnostic");
-                    this.outputChannel.appendLine(e);
+                    this.appendErrorToOutputChannel(e);
                 }
 
                 let collections = this.diagnosticCollections[configuration.name];
@@ -232,5 +232,14 @@ export class Linter {
                 });
             }
         });
+    }
+
+    private appendErrorToOutputChannel(e: unknown) {
+        if (e instanceof Error) {
+            this.outputChannel.appendLine(e.message);
+            if (e.stack) {
+                this.outputChannel.appendLine(e.stack);
+            }
+        }
     }
 }
