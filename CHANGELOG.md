@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.2.0]
+
+### Breaking
+
+- `eval()` had been used to evaluate condition, but currenly we use https://github.com/justinfagnani/jexpr to safe eval.
+
 ## [0.1.0]
 
 ### Breaking
