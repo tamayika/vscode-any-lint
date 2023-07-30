@@ -1,11 +1,20 @@
 import { Context } from "./context";
+import { parse, EvalAstFactory } from "./jexpr";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const astFactory = new EvalAstFactory();
+
 export function safeEval(code: string, $: Context) {
-    return eval(code);
+    const expr = parse(code, astFactory);
+    if (expr === undefined) {
+        return undefined;
+    }
+    return expr.evaluate({ $: $ });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
-    return eval(code);
+    const expr = parse(code, astFactory);
+    if (expr === undefined) {
+        return undefined;
+    }
+    return expr.evaluate({ $: $, $$: $$ });
 }
