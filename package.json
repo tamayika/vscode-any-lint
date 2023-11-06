@@ -114,6 +114,9 @@
                       },
                       "message": {
                         "type": "string"
+                      },
+                      "severity": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -143,6 +146,18 @@
                       "info",
                       "hint"
                     ]
+                  },
+                  "severityMap": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "error",
+                        "warning",
+                        "info",
+                        "hint"
+                      ]
+                    }
                   },
                   "actions": {
                     "type": "array",

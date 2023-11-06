@@ -114,6 +114,12 @@ export class Linter {
                             startLine: "",
                             startColumn: "",
                         },
+                        severityMap: diagnosticConfiguration?.severityMap ?? {
+                            [DiagnosticSeverity.error]: DiagnosticSeverity.error,
+                            [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
+                            [DiagnosticSeverity.info]: DiagnosticSeverity.info,
+                            [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
+                        },
                     };
                     break;
                 case DiagnosticType.yaml:
@@ -126,6 +132,12 @@ export class Linter {
                             startLine: "",
                             startColumn: "",
                         },
+                        severityMap: diagnosticConfiguration?.severityMap ?? {
+                            [DiagnosticSeverity.error]: DiagnosticSeverity.error,
+                            [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
+                            [DiagnosticSeverity.info]: DiagnosticSeverity.info,
+                            [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
+                        },
                     };
                     break;
                 case DiagnosticType.lines:
@@ -134,6 +146,12 @@ export class Linter {
                         ...commonDiagnosticConfiguration,
                         type: DiagnosticType.lines,
                         format: (diagnosticConfiguration as DiagnosticConfigurationLines)?.format ?? diagnosticDefaultFormat,
+                        severityMap: diagnosticConfiguration?.severityMap ?? {
+                            [DiagnosticSeverity.error]: DiagnosticSeverity.error,
+                            [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
+                            [DiagnosticSeverity.info]: DiagnosticSeverity.info,
+                            [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
+                        },
                     };
                     break;
             }

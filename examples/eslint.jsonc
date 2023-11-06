@@ -25,7 +25,12 @@
                     "startColumn": "$.column",
                     "endLine": "$.endLine",
                     "endColumn": "$.endColumn",
-                    "message": "$.message"
+                    "message": "$.message",
+                    "severity": "$.severity"
+                },
+                "severityMap": {
+                    "2": "error",
+                    "1": "warning"
                 },
                 "actions": [
                     {

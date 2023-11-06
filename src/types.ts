@@ -46,6 +46,7 @@ interface DiagnosticConfigurationBase {
     columnCharacterBased?: boolean;
     endColumnInclusive?: boolean;
     severity?: DiagnosticSeverity;
+    severityMap?: { [severity: string]: DiagnosticSeverity };
     actions?: DiagnosticAction[];
 }
 
@@ -75,6 +76,7 @@ export interface DiagnosticSelectors {
     endLine?: string;
     endColumn?: string;
     message?: string;
+    severity?: string;
 }
 
 export enum DiagnosticActionType {

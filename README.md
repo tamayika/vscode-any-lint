@@ -57,18 +57,19 @@ Example supposes following requirements.
 
 ### Diagnostic Configuration
 
-| Key                  | Type                      | Required | Detail                                                                                   |
-| -------------------- | ------------------------- | -------- | ---------------------------------------------------------------------------------------- |
-| output               | string                    |          | the output type. `stdout` or `stderr`. default is `stderr`                               |
-| type                 | string                    |          | the output format type. `lines`, `json` or `yaml`. default is `lines`                    |
-| format               | string                    |          | the `lines` format option. default is `${file}:${startLine}:${startColumn}: ${message}`  |
-| selectors            | DiagnosticSelectors       |          | the `json` or `yaml` selectors option.                                                   |
-| lineZeroBased        | boolean                   |          | the reported diagnostic line is zero based or not. default is `false`                    |
-| columnZeroBased      | boolean                   |          | the reported diagnostic column is zero based or not. default is `false`                  |
-| columnCharacterBased | boolean                   |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes) |
-| endColumnInclusive   | boolean                   |          | the reported diagnostic end column is inclusive. default is `false` (i.e. exclusive)     |
-| severity             | string                    |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                   |
-| actions              | Array\<DiagnosticAction\> |          | the code actions.                                                                        |
+| Key                  | Type                              | Required | Detail                                                                                      |
+| -------------------- | --------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| output               | string                            |          | the output type. `stdout` or `stderr`. default is `stderr`                                  |
+| type                 | string                            |          | the output format type. `lines`, `json` or `yaml`. default is `lines`                       |
+| format               | string                            |          | the `lines` format option. default is `${file}:${startLine}:${startColumn}: ${message}`     |
+| selectors            | DiagnosticSelectors               |          | the `json` or `yaml` selectors option.                                                      |
+| lineZeroBased        | boolean                           |          | the reported diagnostic line is zero based or not. default is `false`                       |
+| columnZeroBased      | boolean                           |          | the reported diagnostic column is zero based or not. default is `false`                     |
+| columnCharacterBased | boolean                           |          | the reported diagnostic column unit is character or not. default is `false` (i.e. bytes)    |
+| endColumnInclusive   | boolean                           |          | the reported diagnostic end column is inclusive. default is `false` (i.e. exclusive)        |
+| severity             | string                            |          | the severity. `error`, `warning`, `info` or `hint`. default is `error`                      |
+| severityMap          | Map\<string, DiagnosticSeverity>\ |          | the severity mapping. key is arbitrary, value must be `error`, `warning`, `info` or `hint`. |
+| actions              | Array\<DiagnosticAction\>         |          | the code actions.                                                                           |
 
 #### format
 
@@ -82,6 +83,7 @@ format supports below placeholders
 | endLine     |                    | the end line of diagnostic     |
 | endColumn   |                    | the end column of diagnostic   |
 | message     |                    | the message of diagnostic      |
+| severity    |                    | the severity of diagnostic     |
 
 #### DiagnosticSelectors
 
@@ -98,6 +100,7 @@ You can access below context by `$` variable like `$.file`.
 | endLine        |                    | the end line selector. result must be `number`       |
 | endColumn      |                    | the end column selector. result must be `number`     |
 | message        |                    | the message selector. result must be `string`        |
+| severity       |                    | the severity selector. result must be `string`       |
 
 ```js
 // routine pseudo code
