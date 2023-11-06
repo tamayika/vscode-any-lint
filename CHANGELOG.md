@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.1]
+
+### Added
+
+- severity selector option
+- lint on open document
+
 ## [0.2.0]
 
 ### Breaking
