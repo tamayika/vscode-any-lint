@@ -11,6 +11,8 @@ const diagnosticStartColumnKey = "startColumn";
 const diagnosticEndLineKey = "endLine";
 const diagnosticEndColumnKey = "endColumn";
 const diagnosticMessageKey = "message";
+const diagnosticSeverityKey = "severity";
+
 enum DiagnosticFormatKeyType {
     string,
     number,
@@ -26,6 +28,7 @@ const diagnosticFormatKeys: DiagnosticFormatKey[] = [
     { key: diagnosticEndLineKey, type: DiagnosticFormatKeyType.number },
     { key: diagnosticEndColumnKey, type: DiagnosticFormatKeyType.number },
     { key: diagnosticMessageKey, type: DiagnosticFormatKeyType.string },
+    { key: diagnosticSeverityKey, type: DiagnosticFormatKeyType.string },
 ];
 export const diagnosticDefaultFormat = `\${${diagnosticFileKey}}:\${${diagnosticStartLineKey}}:\${${diagnosticStartColumnKey}}: \${${diagnosticMessageKey}}`;
 
@@ -91,6 +94,7 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
         const endLineString = match.groups[diagnosticEndLineKey];
         const endColumnString = match.groups[diagnosticEndColumnKey];
         const message = match.groups[diagnosticMessageKey];
+        const severity = match.groups[diagnosticSeverityKey];
         if (!file || !startLineString || !startColumnString) {
             continue;
         }
@@ -129,7 +133,7 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
             file,
             new vscode.Range(startLine, startColumn, endLine, endColumn),
             message,
-            diagnosticSeverityMap[diagnosticConfiguration.severity],
+            diagnosticSeverityMap[severity ? diagnosticConfiguration.severityMap[severity] : diagnosticConfiguration.severity],
             diagnosticConfiguration,
             context,
             {},
@@ -226,11 +230,12 @@ function convertDiagnosticObject(document: vscode.TextDocument, result: any, dia
             endColumn++;
         }
     }
+    const severity = selectors.severity ? safeEval(selectors.severity, result) : undefined;
     return new Diagnostic(
         file,
         new vscode.Range(startLine, startColumn, endLine, endColumn),
         message,
-        diagnosticSeverityMap[diagnosticConfiguration.severity],
+        diagnosticSeverityMap[severity ? diagnosticConfiguration.severityMap[severity] : diagnosticConfiguration.severity],
         diagnosticConfiguration,
         context,
         result
