@@ -6,6 +6,7 @@ export enum Event {
     change = "change",
     save = "save",
     force = "force",
+    open = "open",
 }
 
 
