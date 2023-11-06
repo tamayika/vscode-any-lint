@@ -30,6 +30,12 @@ export class Linter {
         this.disaposables.push(vscode.workspace.onDidSaveTextDocument(document => {
             this.lintDocument(document, Event.save);
         }));
+        this.disaposables.push(vscode.workspace.onDidOpenTextDocument(document => {
+            this.lintDocument(document, Event.open);
+        }));
+        this.disaposables.push(vscode.workspace.onDidCloseTextDocument(document => {
+            this.clearLintDocument(document);
+        }));
         this.disaposables.push(vscode.workspace.onDidChangeConfiguration(() => {
             const configurations = vscode.workspace.getConfiguration(configurationKey, null).get<LinterConfiguration[]>(configurationLintersKey) || [];
             const currentNames = configurations.map(_ => _.name);
@@ -61,13 +67,27 @@ export class Linter {
         this.lintDocument(document, Event.force);
     }
 
+    private clearLintDocument(document: vscode.TextDocument) {
+        const configurations = vscode.workspace.getConfiguration(configurationKey, null).get<LinterConfiguration[]>(configurationLintersKey) || [];
+        for (const configuration of configurations) {
+            const collections = this.diagnosticCollections[configuration.name];
+            if (collections) {
+                collections.set(vscode.Uri.file(document.fileName), []);
+            }
+        }
+    }
+
     private lintDocument(document: vscode.TextDocument, event: Event) {
         const selection = vscode.window.activeTextEditor?.selection ?? new vscode.Selection(0, 0, 0, 0);
         const context = new Context(document, selection);
-        if (this.lastTimeout) {
-            clearTimeout(this.lastTimeout);
+        if (event === Event.open) {
+            this.lintDocumentImpl(document, context, Event.force);
+        } else {
+            if (this.lastTimeout) {
+                clearTimeout(this.lastTimeout);
+            }
+            this.lastTimeout = setTimeout(() => this.lintDocumentImpl(document, context, event), debounceIntervals[event]);
         }
-        this.lastTimeout = setTimeout(() => this.lintDocumentImpl(document, context, event), debounceIntervals[event]);
     }
 
     private lintDocumentImpl(document: vscode.TextDocument, context: Context, event: Event) {
