@@ -95,19 +95,22 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
         const endColumnString = match.groups[diagnosticEndColumnKey];
         const message = match.groups[diagnosticMessageKey];
         const severity = match.groups[diagnosticSeverityKey];
-        if (!file || !startLineString || !startColumnString) {
+        if (!file || !startLineString) {
             continue;
         }
         let startLine = parseInt(startLineString);
         if (!diagnosticConfiguration.lineZeroBased) {
             startLine--;
         };
-        let startColumn = parseInt(startColumnString);
-        if (!diagnosticConfiguration.columnZeroBased) {
-            startColumn--;
-        }
-        if (!diagnosticConfiguration.columnCharacterBased) {
-            startColumn = byteBasedToCharacterBased(document.lineAt(startLine).text, startColumn);
+        let startColumn = 0;
+        if (startColumnString) {
+            startColumn = parseInt(startColumnString);
+            if (!diagnosticConfiguration.columnZeroBased) {
+                startColumn--;
+            }
+            if (!diagnosticConfiguration.columnCharacterBased) {
+                startColumn = byteBasedToCharacterBased(document.lineAt(startLine).text, startColumn);
+            }
         }
         let endLine = endLineString ? parseInt(endLineString) : undefined;
         if (endLine === undefined) {
