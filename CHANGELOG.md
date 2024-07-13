@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.2]
+
+### Changed
+
+- `startColumn` in format is now optional
+  - start of line is used if `startColumn` is unspecified
+
 ## [0.2.1]
 
 ### Added

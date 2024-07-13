@@ -79,7 +79,7 @@ format supports below placeholders
 | ----------- | ------------------ | ------------------------------ |
 | file        | :heavy_check_mark: | the file path                  |
 | startLine   | :heavy_check_mark: | the start line of diagnostic   |
-| startColumn | :heavy_check_mark: | the start column of diagnostic |
+| startColumn |                    | the start column of diagnostic |
 | endLine     |                    | the end line of diagnostic     |
 | endColumn   |                    | the end column of diagnostic   |
 | message     |                    | the message of diagnostic      |
