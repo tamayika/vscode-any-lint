@@ -1,9 +1,21 @@
 # Change Log
 
+
+## [0.3.1]
+
+### Changed
+
+- this is rollback from 0.3.0 to 0.2.2 because of vscode does not support esm in production
+
 ## [0.3.0]
+
+### Changed
 
 - migrate from `jexpr` to `quickjs`
   - this is the recovery of downgrades of js expression by `jexpr`
+
+### Added
+
 - support user defined placeholders and code actions on `format=lines`
 
 ## [0.2.2]
