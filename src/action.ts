@@ -164,7 +164,16 @@ export class AnyAction implements vscode.CodeActionProvider {
             return safeEvalDiagnosticAction(code, diagnostic.context, diagnostic.rawData);
         } catch (e) {
             this.outputChannel.appendLine("failed to eval");
-            this.outputChannel.appendLine(e);
+            this.appendErrorToOutputChannel(e);
+        }
+    }
+    
+    private appendErrorToOutputChannel(e: unknown) {
+        if (e instanceof Error) {
+            this.outputChannel.appendLine(e.message);
+            if (e.stack) {
+                this.outputChannel.appendLine(e.stack);
+            }
         }
     }
 }
