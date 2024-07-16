@@ -73,7 +73,7 @@ Example supposes following requirements.
 
 #### format
 
-format supports below reserved placeholders
+format supports below placeholders
 
 | Key         | Required           | Detail                         |
 | ----------- | ------------------ | ------------------------------ |
@@ -84,8 +84,6 @@ format supports below reserved placeholders
 | endColumn   |                    | the end column of diagnostic   |
 | message     |                    | the message of diagnostic      |
 | severity    |                    | the severity of diagnostic     |
-
-Placeholders not in above list are treated as user defined placeholders.
 
 #### DiagnosticSelectors
 
@@ -145,9 +143,8 @@ This is code action setting for diagnostic. There are several types supported
 You can use two variables in configurations which support JavaScript expression.
 
 * `$`: the same as `condition` setting
-* `$$`: diagnostic object
-  * `format=lines`: object which consists of reserved placeholders and user defined placeholders.
-  * `format=json` or `format=yaml`: When you specify `subDiagnostics` selector, this is sub diagnostic.
+* `$$`: the reported diagnostic object. When you specify `subDiagnostics` selector, this is sub diagnostic.
+
 
 ##### Common Configuration
 

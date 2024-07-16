@@ -62,26 +62,26 @@ export class Diagnostic extends vscode.Diagnostic {
     }
 }
 
-export async function convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context): Promise<Diagnostic[]> {
+export function convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context): Diagnostic[] {
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
             return convertResultToDiagnosticByLines(document, result, diagnosticConfiguration, context);
         case DiagnosticType.json:
-            return await convertResultToDiagnosticByObject(document, JSON.parse(result), diagnosticConfiguration, context);
+            return convertResultToDiagnosticByObject(document, JSON.parse(result), diagnosticConfiguration, context);
         case DiagnosticType.yaml:
-            return await convertResultToDiagnosticByObject(document, YAML.load(result), diagnosticConfiguration, context);
+            return convertResultToDiagnosticByObject(document, YAML.load(result), diagnosticConfiguration, context);
     }
     return [];
 }
 
-function convertResultToDiagnosticByLines(document:vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfigurationLines>, context: Context) {
+function convertResultToDiagnosticByLines(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfigurationLines>, context: Context) {
     let diagnosticStrings: string[] = [result];
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
             diagnosticStrings = result.trim().replace("\r\n", "\n").replace("\r", "\n").split("\n");
             break;
     }
-    const [regexp, keys] = formatToRegexpAndKeys(diagnosticConfiguration.format);
+    const regexp = formatToRegexp(diagnosticConfiguration.format);
     const diagnostics: Diagnostic[] = [];
     for (const diagnosticString of diagnosticStrings) {
         const match = diagnosticString.match(regexp);
@@ -132,10 +132,6 @@ function convertResultToDiagnosticByLines(document:vscode.TextDocument, result: 
                 endColumn++;
             }
         }
-        const rawData: { [index: string]: string } = {};
-        for (const key of keys) {
-            rawData[key] = match.groups[key];
-        }
         diagnostics.push(new Diagnostic(
             file,
             new vscode.Range(startLine, startColumn, endLine, endColumn),
@@ -143,41 +139,41 @@ function convertResultToDiagnosticByLines(document:vscode.TextDocument, result: 
             diagnosticSeverityMap[severity ? diagnosticConfiguration.severityMap[severity] : diagnosticConfiguration.severity],
             diagnosticConfiguration,
             context,
-            rawData,
+            {},
         ));
     }
     return diagnostics;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context) {
+function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context) {
     const diagnostics: Diagnostic[] = [];
     const selectors = diagnosticConfiguration.selectors;
     if (!selectors.diagnostics || !selectors.file || !selectors.startLine || !selectors.startColumn) {
         return diagnostics;
     }
-    const resultDiagnostics = await safeEval(selectors.diagnostics, result);
+    const resultDiagnostics = safeEval(selectors.diagnostics, result);
     if (!resultDiagnostics || !Array.isArray(resultDiagnostics)) {
         return diagnostics;
     }
     for (const resultDiagnostic of resultDiagnostics) {
-        const file = await safeEval(selectors.file, resultDiagnostic);
+        const file = safeEval(selectors.file, resultDiagnostic);
         if (!file) {
             continue;
         }
         if (selectors.subDiagnostics) {
-            const subResultDiagnostics = await safeEval(selectors.subDiagnostics, resultDiagnostic);
+            const subResultDiagnostics = safeEval(selectors.subDiagnostics, resultDiagnostic);
             if (!subResultDiagnostics || !Array.isArray(subResultDiagnostics)) {
                 continue;
             }
             for (const subResultDiagnostic of subResultDiagnostics) {
-                const diagnostic = await convertDiagnosticObject(document, subResultDiagnostic, diagnosticConfiguration, context, file);
+                const diagnostic = convertDiagnosticObject(document, subResultDiagnostic, diagnosticConfiguration, context, file);
                 if (diagnostic) {
                     diagnostics.push(diagnostic);
                 }
             }
         } else {
-            const diagnostic = await convertDiagnosticObject(document, resultDiagnostic, diagnosticConfiguration, context, file);
+            const diagnostic = convertDiagnosticObject(document, resultDiagnostic, diagnosticConfiguration, context, file);
             if (diagnostic) {
                 diagnostics.push(diagnostic);
             }
@@ -187,21 +183,21 @@ async function convertResultToDiagnosticByObject(document: vscode.TextDocument, 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context, parentFile: string) {
+function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context, parentFile: string) {
     const selectors = diagnosticConfiguration.selectors;
-    const file = await safeEval(selectors.file, result) || parentFile;
+    const file = safeEval(selectors.file, result) || parentFile;
     if (!file) {
         return;
     }
-    const message = selectors.message ? await safeEval(selectors.message, result) : "";
-    let startLine = await safeEval(selectors.startLine, result);
+    const message = selectors.message ? safeEval(selectors.message, result) : "";
+    let startLine = safeEval(selectors.startLine, result);
     if (typeof startLine !== "number") {
         return;
     }
     if (!diagnosticConfiguration.lineZeroBased) {
         startLine--;
     }
-    let startColumn = await safeEval(selectors.startColumn, result);
+    let startColumn = safeEval(selectors.startColumn, result);
     if (typeof startColumn !== "number") {
         return;
     }
@@ -211,7 +207,7 @@ async function convertDiagnosticObject(document: vscode.TextDocument, result: an
     if (!diagnosticConfiguration.columnCharacterBased) {
         startColumn = byteBasedToCharacterBased(document.lineAt(startLine).text, startColumn);
     }
-    let endLine = selectors.endLine ? await safeEval(selectors.endLine, result) : undefined;
+    let endLine = selectors.endLine ? safeEval(selectors.endLine, result) : undefined;
     if (typeof endLine !== "number" && typeof endLine !== "undefined") {
         return;
     }
@@ -220,7 +216,7 @@ async function convertDiagnosticObject(document: vscode.TextDocument, result: an
     } else if (!diagnosticConfiguration.lineZeroBased) {
         endLine--;
     }
-    let endColumn = selectors.endColumn ? await safeEval(selectors.endColumn, result) : undefined;
+    let endColumn = selectors.endColumn ? safeEval(selectors.endColumn, result) : undefined;
     if (typeof endColumn !== "number" && typeof endColumn !== "undefined") {
         return;
     }
@@ -237,7 +233,7 @@ async function convertDiagnosticObject(document: vscode.TextDocument, result: an
             endColumn++;
         }
     }
-    const severity = selectors.severity ? await safeEval(selectors.severity, result) : undefined;
+    const severity = selectors.severity ? safeEval(selectors.severity, result) : undefined;
     return new Diagnostic(
         file,
         new vscode.Range(startLine, startColumn, endLine, endColumn),
@@ -249,28 +245,32 @@ async function convertDiagnosticObject(document: vscode.TextDocument, result: an
     );
 }
 
-function formatToRegexpAndKeys(format: string): [RegExp, Set<string>] {
-    const keys = new Set<string>();
+function formatToRegexp(format: string): RegExp {
+    const patternRanges: (DiagnosticFormatKey & { start: number, length: number })[] = [];
+    for (const diagnosticFormatKey of diagnosticFormatKeys) {
+        let position = 0;
+        while (true) {
+            const index = format.indexOf(`\${${diagnosticFormatKey.key}}`, position);
+            if (index < 0) {
+                break;
+            }
+            patternRanges.push({ ...diagnosticFormatKey, start: index, length: diagnosticFormatKey.key.length + 3 });
+            position = index + diagnosticFormatKey.key.length + 3;
+        }
+    }
+    patternRanges.sort((r1, r2) => r1.start - r2.start);
     let position = 0;
     let pattern = "";
-    for (; ;) {
-        const match = format.substring(position).match(/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/);
-        if (!match || match.index === undefined || match.index === null) {
-            break;
+    for (const range of patternRanges) {
+        if (position < range.start) {
+            pattern += escapeRegexp(format.substring(position, range.start));
         }
-        const actualPosition = match.index + position;
-        if (position < actualPosition) {
-            pattern += escapeRegexp(format.substring(position, actualPosition));
-        }
-        keys.add(match[1]);
-        const found = diagnosticFormatKeys.find(key => key.key === match[1]);
-        const keyType = found ? found.type : DiagnosticFormatKeyType.string;
-        const globPattern = keyType === DiagnosticFormatKeyType.string ? ".*" : "\\d+";
-        pattern += `(?<${match[1]}>${globPattern})`;
-        position += match.index + match[0].length;
+        const globPattern = range.type === DiagnosticFormatKeyType.string ? ".*" : "\\d+";
+        pattern += `(?<${range.key}>${globPattern})`;
+        position = range.start + range.length;
     }
     if (position < format.length) {
         pattern += escapeRegexp(format.substring(position));
     }
-    return [new RegExp(pattern), keys];
+    return new RegExp(pattern);
 }

@@ -59,12 +59,12 @@ export class Linter {
         this.diagnosticCollections = {};
     }
 
-    public async lintDocumentByUri(uri: string) {
+    public lintDocumentByUri(uri: string) {
         const document = vscode.workspace.textDocuments.find(_ => _.uri.toString() === uri);
         if (!document) {
             return;
         }
-        await this.lintDocument(document, Event.force);
+        this.lintDocument(document, Event.force);
     }
 
     private clearLintDocument(document: vscode.TextDocument) {
@@ -77,11 +77,11 @@ export class Linter {
         }
     }
 
-    private async lintDocument(document: vscode.TextDocument, event: Event) {
+    private lintDocument(document: vscode.TextDocument, event: Event) {
         const selection = vscode.window.activeTextEditor?.selection ?? new vscode.Selection(0, 0, 0, 0);
         const context = new Context(document, selection);
         if (event === Event.open) {
-            await this.lintDocumentImpl(document, context, Event.force);
+            this.lintDocumentImpl(document, context, Event.force);
         } else {
             if (this.lastTimeout) {
                 clearTimeout(this.lastTimeout);
@@ -90,7 +90,7 @@ export class Linter {
         }
     }
 
-    private async lintDocumentImpl(document: vscode.TextDocument, context: Context, event: Event) {
+    private lintDocumentImpl(document: vscode.TextDocument, context: Context, event: Event) {
         const configurations = vscode.workspace.getConfiguration(configurationKey, null).get<LinterConfiguration[]>(configurationLintersKey) || [];
         for (const configuration of configurations) {
             if (!(configuration.on || [Event.save]).some(_ => _ === event) && event !== Event.force) {
@@ -104,7 +104,7 @@ export class Linter {
             }
             if (configuration.condition) {
                 try {
-                    if (!(await safeEval(configuration.condition, context))) {
+                    if (!safeEval(configuration.condition, context)) {
                         continue;
                     }
                 } catch (e) {
@@ -183,11 +183,11 @@ export class Linter {
                 requiredDiagnosticConfiguration.output,
                 cwd,
                 event,
-            ).then(async result => {
+            ).then(result => {
                 this.outputChannel.appendLine(result);
                 let diagnostics: Diagnostic[] = [];
                 try {
-                    diagnostics = await convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
+                    diagnostics = convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
                 } catch (e) {
                     this.outputChannel.appendLine("failed to convert to diagnostic");
                     this.appendErrorToOutputChannel(e);
