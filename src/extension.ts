@@ -4,8 +4,6 @@ import * as vscode from 'vscode';
 import { AnyAction } from './action';
 import { ignoreCommand, openUriCommand, Commands, runCommand } from './command';
 import { Linter } from './linter';
-import { getQuickJS } from "quickjs-emscripten";
-import { Arena } from "quickjs-emscripten-sync";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -27,11 +25,6 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand(
 		runCommand, commands.run
 	));
-	(async () => {
-		const ctx = (await getQuickJS()).newContext();
-		const arena = new Arena(ctx, { isMarshalable: true });
-		console.log(arena.evalCode("1 + 1"));
-	})();
 }
 
 // this method is called when your extension is deactivated

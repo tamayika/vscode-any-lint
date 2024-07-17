@@ -54,11 +54,11 @@ export class AnyAction implements vscode.CodeActionProvider {
 
     private async createOpenUriCodeAction(diagnostic: Diagnostic, diagnosticAction: DiagnosticActionOpenUri) {
         const title = await this.safeEval(diagnosticAction.title, diagnostic);
-        if (title === undefined) {
+        if (title === undefined || typeof title !== "string") {
             return;
         }
         const uri = await this.safeEval(diagnosticAction.uri, diagnostic);
-        if (uri === undefined) {
+        if (uri === undefined || typeof uri !== "string") {
             return;
         }
         const action = new vscode.CodeAction(title);
@@ -77,10 +77,11 @@ export class AnyAction implements vscode.CodeActionProvider {
         if (title === undefined || typeof title !== "string") {
             return;
         }
-        let comment = await this.safeEval(diagnosticAction.comment, diagnostic);
-        if (comment === undefined || typeof comment !== "string") {
+        const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
+        if (commentResult === undefined || typeof commentResult !== "string") {
             return;
         }
+        let comment = commentResult;
         const action = new vscode.CodeAction(title);
         let location: vscode.Range | undefined;
         const eol = getDocumentEol(document);

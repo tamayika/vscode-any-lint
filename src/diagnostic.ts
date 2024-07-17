@@ -74,7 +74,7 @@ export async function convertResultToDiagnostic(document: vscode.TextDocument, r
     return [];
 }
 
-function convertResultToDiagnosticByLines(document:vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfigurationLines>, context: Context) {
+function convertResultToDiagnosticByLines(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfigurationLines>, context: Context) {
     let diagnosticStrings: string[] = [result];
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
@@ -162,7 +162,7 @@ async function convertResultToDiagnosticByObject(document: vscode.TextDocument, 
     }
     for (const resultDiagnostic of resultDiagnostics) {
         const file = await safeEval(selectors.file, resultDiagnostic);
-        if (!file) {
+        if (!file || typeof file !== "string") {
             continue;
         }
         if (selectors.subDiagnostics) {
@@ -190,10 +190,13 @@ async function convertResultToDiagnosticByObject(document: vscode.TextDocument, 
 async function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context, parentFile: string) {
     const selectors = diagnosticConfiguration.selectors;
     const file = await safeEval(selectors.file, result) || parentFile;
-    if (!file) {
+    if (!file || typeof file !== "string") {
         return;
     }
     const message = selectors.message ? await safeEval(selectors.message, result) : "";
+    if (!message || typeof message !== "string") {
+        return;
+    }
     let startLine = await safeEval(selectors.startLine, result);
     if (typeof startLine !== "number") {
         return;
@@ -225,22 +228,25 @@ async function convertDiagnosticObject(document: vscode.TextDocument, result: an
         return;
     }
     if (endColumn === undefined) {
-        endColumn = document.lineAt(endLine).text.length;
+        endColumn = document.lineAt(endLine as number).text.length;
     } else {
         if (!diagnosticConfiguration.columnZeroBased) {
             endColumn--;
         }
         if (!diagnosticConfiguration.columnCharacterBased) {
-            endColumn = byteBasedToCharacterBased(document.lineAt(endLine).text, endColumn);
+            endColumn = byteBasedToCharacterBased(document.lineAt(endLine as number).text, endColumn);
         }
         if (diagnosticConfiguration.endColumnInclusive) {
-            endColumn++;
+            (endColumn as number)++;
         }
     }
     const severity = selectors.severity ? await safeEval(selectors.severity, result) : undefined;
+    if (typeof severity !== "string" && typeof severity !== "undefined") {
+        return;
+    }
     return new Diagnostic(
         file,
-        new vscode.Range(startLine, startColumn, endLine, endColumn),
+        new vscode.Range(startLine, startColumn as number, endLine as number, endColumn as number),
         message,
         diagnosticSeverityMap[severity ? diagnosticConfiguration.severityMap[severity] : diagnosticConfiguration.severity],
         diagnosticConfiguration,
