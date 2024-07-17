@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.3.2]
+
+### Changed
+
+- migrate from `jexpr` to `quickjs`
+  - this is the recovery of downgrades of js expression by `jexpr`
+  - `quickjs` is running in worker threads
+
+### Added
+
+- support user defined placeholders and code actions on `format=lines`
 
 ## [0.3.1]
 
