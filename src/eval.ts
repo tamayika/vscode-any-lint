@@ -1,20 +1,35 @@
+import { Arena } from "quickjs-emscripten-sync";
 import { Context } from "./context";
-import { parse, EvalAstFactory } from "./jexpr";
+import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten";
 
-const astFactory = new EvalAstFactory();
+let quickJS: QuickJSWASMModule | undefined;
 
-export function safeEval(code: string, $: Context) {
-    const expr = parse(code, astFactory);
-    if (expr === undefined) {
-        return undefined;
-    }
-    return expr.evaluate({ $: $ });
+export async function safeEval(code: string, $: Context) {
+    const quickJS = await ensureQuickJS();
+    const ctx = quickJS.newContext();
+    const area = new Arena(ctx, { isMarshalable: true });
+    area.expose({ $: $ });
+    const ret = area.evalCode(code);
+    area.dispose();
+    ctx.dispose();
+    return ret;
 }
 
-export function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
-    const expr = parse(code, astFactory);
-    if (expr === undefined) {
-        return undefined;
+export async function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
+    const quickJS = await ensureQuickJS();
+    const ctx = quickJS.newContext();
+    const area = new Arena(ctx, { isMarshalable: true });
+    area.expose({ $: $, $$: $$ });
+    const ret = area.evalCode(code);
+    area.dispose();
+    ctx.dispose();
+    return ret;
+}
+
+async function ensureQuickJS() {
+    if (quickJS !== undefined) {
+        return quickJS;
     }
-    return expr.evaluate({ $: $, $$: $$ });
+    quickJS = await getQuickJS();
+    return quickJS;
 }
