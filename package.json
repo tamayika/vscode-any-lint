@@ -13,7 +13,7 @@
   "repository": {
     "url": "https://github.com/tamayika/vscode-any-lint"
   },
-  "version": "0.3.1",
+  "version": "0.3.2",
   "engines": {
     "vscode": "^1.91.0"
   },
@@ -228,22 +228,25 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/glob": "^7.1.3",
-    "@types/js-yaml": "^4.0.0",
-    "@types/mocha": "^8.0.4",
-    "@types/node": "^12.11.7",
-    "@types/vscode": "^1.52.0",
-    "@typescript-eslint/eslint-plugin": "^4.14.0",
-    "@typescript-eslint/parser": "^4.14.0",
-    "eslint": "^7.18.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.91.0",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.11.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^7.2.0",
-    "glob": "^7.1.6",
-    "mocha": "^8.1.3",
-    "prettier": "^2.2.1",
-    "typescript": "^4.1.3",
-    "vscode-test": "^1.4.1"
+    "eslint-plugin-prettier": "^5.1.3",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.3"
   },
   "dependencies": {
-    "js-yaml": "^4.0.0"
+    "@jitl/quickjs-singlefile-cjs-release-sync": "^0.29.2",
+    "js-yaml": "^4.1.0",
+    "quickjs-emscripten-core": "^0.29.2",
+    "quickjs-emscripten-sync": "^1.5.2"
   }
 }

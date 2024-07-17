@@ -1,20 +1,70 @@
+import * as path from "path";
+import { Worker } from "worker_threads";
+import * as url from "url";
 import { Context } from "./context";
-import { parse, EvalAstFactory } from "./jexpr";
 
-const astFactory = new EvalAstFactory();
+const worker = new Worker(
+    url.pathToFileURL(path.join(__dirname, "/worker/quickjs-worker.js"))
+);
 
-export function safeEval(code: string, $: Context) {
-    const expr = parse(code, astFactory);
-    if (expr === undefined) {
-        return undefined;
-    }
-    return expr.evaluate({ $: $ });
+let id = 0;
+const idPromises = new Map<number, { resolve: (_: unknown) => void, reject: (_: unknown) => void }>();
+
+function setIdPromise(id: number, resolve: (_: unknown) => void, reject: (_: unknown) => void) {
+    idPromises.set(id, { resolve, reject });
 }
 
-export function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
-    const expr = parse(code, astFactory);
-    if (expr === undefined) {
-        return undefined;
+function getIdPromise(id: number): { resolve: (_: unknown) => void, reject: (_: unknown) => void } | undefined {
+    const promise = idPromises.get(id);
+    if (!promise) {
+        return;
     }
-    return expr.evaluate({ $: $, $$: $$ });
+    idPromises.delete(id);
+    return promise;
+}
+
+worker.on("message", ((payload: { id: number, result: unknown } | { id: number, error: unknown }) => {
+    const promise = getIdPromise(payload.id);
+    if (!promise) {
+        return;
+    }
+    if ("result" in payload) {
+        promise.resolve(payload.result);
+    } else if ("error" in payload) {
+        promise.reject(payload.error);
+    }
+}));
+
+
+export async function safeEval(code: string, $: Context) {
+    const currentId = id++;
+    const promise = new Promise<unknown>((resolve, reject) => {
+        setIdPromise(currentId, resolve, reject);
+    });
+    worker.postMessage({
+        id: currentId,
+        type: "safeEval",
+        payload: {
+            code,
+            $,
+        },
+    });
+    return promise;
+}
+
+export async function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
+    const currentId = id++;
+    const promise = new Promise<unknown>((resolve, reject) => {
+        setIdPromise(currentId, resolve, reject);
+    });
+    worker.postMessage({
+        id: currentId,
+        type: "safeEvalDiagnosticAction",
+        payload: {
+            code,
+            $,
+            $$,
+        },
+    });
+    return promise;
 }

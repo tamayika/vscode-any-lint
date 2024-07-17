@@ -14,17 +14,21 @@ export class AnyAction implements vscode.CodeActionProvider {
     }
 
     public provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
+        return this.provideCodeActionsImpl(document, range, context);
+    }
+
+    private async provideCodeActionsImpl(document: vscode.TextDocument, range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext) {
         const actions: vscode.CodeAction[] = [];
         for (const diagnostic of context.diagnostics.filter(isAnyLintDiagnostic).filter(_ => _.hasActions)) {
-            actions.push(...this.createCodeActions(document, diagnostic));
+            actions.push(...(await this.createCodeActions(document, diagnostic)));
         }
         return actions;
     }
 
-    private createCodeActions(document: vscode.TextDocument, diagnostic: Diagnostic) {
+    private async createCodeActions(document: vscode.TextDocument, diagnostic: Diagnostic) {
         const actions: vscode.CodeAction[] = [];
         for (const diagnosticAction of diagnostic.diagnosticConfiguration.actions) {
-            const action = this.createCodeAction(document, diagnostic, diagnosticAction);
+            const action = await this.createCodeAction(document, diagnostic, diagnosticAction);
             if (action) {
                 actions.push(action);
             }
@@ -32,7 +36,7 @@ export class AnyAction implements vscode.CodeActionProvider {
         return actions;
     }
 
-    private createCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticAction) {
+    private async createCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticAction) {
         if (diagnosticAction.condition) {
             if (!this.safeEval(diagnosticAction.condition, diagnostic)) {
                 return;
@@ -40,21 +44,21 @@ export class AnyAction implements vscode.CodeActionProvider {
         }
         switch (diagnosticAction.type) {
             case DiagnosticActionType.openUri:
-                return this.createOpenUriCodeAction(diagnostic, diagnosticAction);
+                return await this.createOpenUriCodeAction(diagnostic, diagnosticAction);
             case DiagnosticActionType.ignore:
-                return this.createIgnoreCodeAction(document, diagnostic, diagnosticAction);
+                return await this.createIgnoreCodeAction(document, diagnostic, diagnosticAction);
             case DiagnosticActionType.run:
                 return this.createRunCodeAction(document, diagnostic, diagnosticAction);
         }
     }
 
-    private createOpenUriCodeAction(diagnostic: Diagnostic, diagnosticAction: DiagnosticActionOpenUri) {
-        const title = this.safeEval(diagnosticAction.title, diagnostic);
-        if (title === undefined) {
+    private async createOpenUriCodeAction(diagnostic: Diagnostic, diagnosticAction: DiagnosticActionOpenUri) {
+        const title = await this.safeEval(diagnosticAction.title, diagnostic);
+        if (title === undefined || typeof title !== "string") {
             return;
         }
-        const uri = this.safeEval(diagnosticAction.uri, diagnostic);
-        if (uri === undefined) {
+        const uri = await this.safeEval(diagnosticAction.uri, diagnostic);
+        if (uri === undefined || typeof uri !== "string") {
             return;
         }
         const action = new vscode.CodeAction(title);
@@ -68,15 +72,16 @@ export class AnyAction implements vscode.CodeActionProvider {
         return action;
     }
 
-    private createIgnoreCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticActionIgnore) {
-        const title = this.safeEval(diagnosticAction.title, diagnostic);
+    private async createIgnoreCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticActionIgnore) {
+        const title = await this.safeEval(diagnosticAction.title, diagnostic);
         if (title === undefined || typeof title !== "string") {
             return;
         }
-        let comment = this.safeEval(diagnosticAction.comment, diagnostic);
-        if (comment === undefined || typeof comment !== "string") {
+        const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
+        if (commentResult === undefined || typeof commentResult !== "string") {
             return;
         }
+        let comment = commentResult;
         const action = new vscode.CodeAction(title);
         let location: vscode.Range | undefined;
         const eol = getDocumentEol(document);
@@ -132,15 +137,15 @@ export class AnyAction implements vscode.CodeActionProvider {
         return action;
     }
 
-    private createRunCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticActionRun) {
-        const title = this.safeEval(diagnosticAction.title, diagnostic);
+    private async createRunCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticActionRun) {
+        const title = await this.safeEval(diagnosticAction.title, diagnostic);
         if (title === undefined || typeof title !== "string") {
             return;
         }
         if (!diagnosticAction.binPath) {
             return;
         }
-        const binPath = this.safeEval(diagnosticAction.binPath, diagnostic);
+        const binPath = await this.safeEval(diagnosticAction.binPath, diagnostic);
         const action = new vscode.CodeAction(title);
         const args = (diagnosticAction.args ?? []).map(_ => this.safeEval(_, diagnostic)).filter(_ => !!_);
         const cwd = diagnosticAction.cwd ? this.safeEval(diagnosticAction.cwd, diagnostic) : diagnostic.context.cwd;
@@ -159,15 +164,15 @@ export class AnyAction implements vscode.CodeActionProvider {
         return action;
     }
 
-    private safeEval(code: string, diagnostic: Diagnostic) {
+    private async safeEval(code: string, diagnostic: Diagnostic) {
         try {
-            return safeEvalDiagnosticAction(code, diagnostic.context, diagnostic.rawData);
+            return await safeEvalDiagnosticAction(code, diagnostic.context, diagnostic.rawData);
         } catch (e) {
             this.outputChannel.appendLine("failed to eval");
             this.appendErrorToOutputChannel(e);
         }
     }
-    
+
     private appendErrorToOutputChannel(e: unknown) {
         if (e instanceof Error) {
             this.outputChannel.appendLine(e.message);

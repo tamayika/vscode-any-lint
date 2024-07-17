@@ -62,14 +62,14 @@ export class Diagnostic extends vscode.Diagnostic {
     }
 }
 
-export function convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context): Diagnostic[] {
+export async function convertResultToDiagnostic(document: vscode.TextDocument, result: string, diagnosticConfiguration: Required<DiagnosticConfiguration>, context: Context): Promise<Diagnostic[]> {
     switch (diagnosticConfiguration.type) {
         case DiagnosticType.lines:
             return convertResultToDiagnosticByLines(document, result, diagnosticConfiguration, context);
         case DiagnosticType.json:
-            return convertResultToDiagnosticByObject(document, JSON.parse(result), diagnosticConfiguration, context);
+            return await convertResultToDiagnosticByObject(document, JSON.parse(result), diagnosticConfiguration, context);
         case DiagnosticType.yaml:
-            return convertResultToDiagnosticByObject(document, YAML.load(result), diagnosticConfiguration, context);
+            return await convertResultToDiagnosticByObject(document, YAML.load(result), diagnosticConfiguration, context);
     }
     return [];
 }
@@ -81,7 +81,7 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
             diagnosticStrings = result.trim().replace("\r\n", "\n").replace("\r", "\n").split("\n");
             break;
     }
-    const regexp = formatToRegexp(diagnosticConfiguration.format);
+    const [regexp, keys] = formatToRegexpAndKeys(diagnosticConfiguration.format);
     const diagnostics: Diagnostic[] = [];
     for (const diagnosticString of diagnosticStrings) {
         const match = diagnosticString.match(regexp);
@@ -132,6 +132,10 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
                 endColumn++;
             }
         }
+        const rawData: { [index: string]: string } = {};
+        for (const key of keys) {
+            rawData[key] = match.groups[key];
+        }
         diagnostics.push(new Diagnostic(
             file,
             new vscode.Range(startLine, startColumn, endLine, endColumn),
@@ -139,41 +143,41 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
             diagnosticSeverityMap[severity ? diagnosticConfiguration.severityMap[severity] : diagnosticConfiguration.severity],
             diagnosticConfiguration,
             context,
-            {},
+            rawData,
         ));
     }
     return diagnostics;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context) {
+async function convertResultToDiagnosticByObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context) {
     const diagnostics: Diagnostic[] = [];
     const selectors = diagnosticConfiguration.selectors;
     if (!selectors.diagnostics || !selectors.file || !selectors.startLine || !selectors.startColumn) {
         return diagnostics;
     }
-    const resultDiagnostics = safeEval(selectors.diagnostics, result);
+    const resultDiagnostics = await safeEval(selectors.diagnostics, result);
     if (!resultDiagnostics || !Array.isArray(resultDiagnostics)) {
         return diagnostics;
     }
     for (const resultDiagnostic of resultDiagnostics) {
-        const file = safeEval(selectors.file, resultDiagnostic);
-        if (!file) {
+        const file = await safeEval(selectors.file, resultDiagnostic);
+        if (!file || typeof file !== "string") {
             continue;
         }
         if (selectors.subDiagnostics) {
-            const subResultDiagnostics = safeEval(selectors.subDiagnostics, resultDiagnostic);
+            const subResultDiagnostics = await safeEval(selectors.subDiagnostics, resultDiagnostic);
             if (!subResultDiagnostics || !Array.isArray(subResultDiagnostics)) {
                 continue;
             }
             for (const subResultDiagnostic of subResultDiagnostics) {
-                const diagnostic = convertDiagnosticObject(document, subResultDiagnostic, diagnosticConfiguration, context, file);
+                const diagnostic = await convertDiagnosticObject(document, subResultDiagnostic, diagnosticConfiguration, context, file);
                 if (diagnostic) {
                     diagnostics.push(diagnostic);
                 }
             }
         } else {
-            const diagnostic = convertDiagnosticObject(document, resultDiagnostic, diagnosticConfiguration, context, file);
+            const diagnostic = await convertDiagnosticObject(document, resultDiagnostic, diagnosticConfiguration, context, file);
             if (diagnostic) {
                 diagnostics.push(diagnostic);
             }
@@ -183,21 +187,24 @@ function convertResultToDiagnosticByObject(document: vscode.TextDocument, result
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context, parentFile: string) {
+async function convertDiagnosticObject(document: vscode.TextDocument, result: any, diagnosticConfiguration: Required<DiagnosticConfigurationJSON | DiagnosticConfigurationYAML>, context: Context, parentFile: string) {
     const selectors = diagnosticConfiguration.selectors;
-    const file = safeEval(selectors.file, result) || parentFile;
-    if (!file) {
+    const file = await safeEval(selectors.file, result) || parentFile;
+    if (!file || typeof file !== "string") {
         return;
     }
-    const message = selectors.message ? safeEval(selectors.message, result) : "";
-    let startLine = safeEval(selectors.startLine, result);
+    const message = selectors.message ? await safeEval(selectors.message, result) : "";
+    if (!message || typeof message !== "string") {
+        return;
+    }
+    let startLine = await safeEval(selectors.startLine, result);
     if (typeof startLine !== "number") {
         return;
     }
     if (!diagnosticConfiguration.lineZeroBased) {
         startLine--;
     }
-    let startColumn = safeEval(selectors.startColumn, result);
+    let startColumn = await safeEval(selectors.startColumn, result);
     if (typeof startColumn !== "number") {
         return;
     }
@@ -207,7 +214,7 @@ function convertDiagnosticObject(document: vscode.TextDocument, result: any, dia
     if (!diagnosticConfiguration.columnCharacterBased) {
         startColumn = byteBasedToCharacterBased(document.lineAt(startLine).text, startColumn);
     }
-    let endLine = selectors.endLine ? safeEval(selectors.endLine, result) : undefined;
+    let endLine = selectors.endLine ? await safeEval(selectors.endLine, result) : undefined;
     if (typeof endLine !== "number" && typeof endLine !== "undefined") {
         return;
     }
@@ -216,27 +223,30 @@ function convertDiagnosticObject(document: vscode.TextDocument, result: any, dia
     } else if (!diagnosticConfiguration.lineZeroBased) {
         endLine--;
     }
-    let endColumn = selectors.endColumn ? safeEval(selectors.endColumn, result) : undefined;
+    let endColumn = selectors.endColumn ? await safeEval(selectors.endColumn, result) : undefined;
     if (typeof endColumn !== "number" && typeof endColumn !== "undefined") {
         return;
     }
     if (endColumn === undefined) {
-        endColumn = document.lineAt(endLine).text.length;
+        endColumn = document.lineAt(endLine as number).text.length;
     } else {
         if (!diagnosticConfiguration.columnZeroBased) {
             endColumn--;
         }
         if (!diagnosticConfiguration.columnCharacterBased) {
-            endColumn = byteBasedToCharacterBased(document.lineAt(endLine).text, endColumn);
+            endColumn = byteBasedToCharacterBased(document.lineAt(endLine as number).text, endColumn);
         }
         if (diagnosticConfiguration.endColumnInclusive) {
-            endColumn++;
+            (endColumn as number)++;
         }
     }
-    const severity = selectors.severity ? safeEval(selectors.severity, result) : undefined;
+    const severity = selectors.severity ? await safeEval(selectors.severity, result) : undefined;
+    if (typeof severity !== "string" && typeof severity !== "undefined") {
+        return;
+    }
     return new Diagnostic(
         file,
-        new vscode.Range(startLine, startColumn, endLine, endColumn),
+        new vscode.Range(startLine, startColumn as number, endLine as number, endColumn as number),
         message,
         diagnosticSeverityMap[severity ? diagnosticConfiguration.severityMap[severity] : diagnosticConfiguration.severity],
         diagnosticConfiguration,
@@ -245,32 +255,28 @@ function convertDiagnosticObject(document: vscode.TextDocument, result: any, dia
     );
 }
 
-function formatToRegexp(format: string): RegExp {
-    const patternRanges: (DiagnosticFormatKey & { start: number, length: number })[] = [];
-    for (const diagnosticFormatKey of diagnosticFormatKeys) {
-        let position = 0;
-        while (true) {
-            const index = format.indexOf(`\${${diagnosticFormatKey.key}}`, position);
-            if (index < 0) {
-                break;
-            }
-            patternRanges.push({ ...diagnosticFormatKey, start: index, length: diagnosticFormatKey.key.length + 3 });
-            position = index + diagnosticFormatKey.key.length + 3;
-        }
-    }
-    patternRanges.sort((r1, r2) => r1.start - r2.start);
+function formatToRegexpAndKeys(format: string): [RegExp, Set<string>] {
+    const keys = new Set<string>();
     let position = 0;
     let pattern = "";
-    for (const range of patternRanges) {
-        if (position < range.start) {
-            pattern += escapeRegexp(format.substring(position, range.start));
+    for (; ;) {
+        const match = format.substring(position).match(/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/);
+        if (!match || match.index === undefined || match.index === null) {
+            break;
         }
-        const globPattern = range.type === DiagnosticFormatKeyType.string ? ".*" : "\\d+";
-        pattern += `(?<${range.key}>${globPattern})`;
-        position = range.start + range.length;
+        const actualPosition = match.index + position;
+        if (position < actualPosition) {
+            pattern += escapeRegexp(format.substring(position, actualPosition));
+        }
+        keys.add(match[1]);
+        const found = diagnosticFormatKeys.find(key => key.key === match[1]);
+        const keyType = found ? found.type : DiagnosticFormatKeyType.string;
+        const globPattern = keyType === DiagnosticFormatKeyType.string ? ".*" : "\\d+";
+        pattern += `(?<${match[1]}>${globPattern})`;
+        position += match.index + match[0].length;
     }
     if (position < format.length) {
         pattern += escapeRegexp(format.substring(position));
     }
-    return new RegExp(pattern);
+    return [new RegExp(pattern), keys];
 }
