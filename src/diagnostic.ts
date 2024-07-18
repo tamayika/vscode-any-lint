@@ -241,7 +241,7 @@ async function convertDiagnosticObject(document: vscode.TextDocument, result: an
         }
     }
     const severity = selectors.severity ? await safeEval(selectors.severity, result) : undefined;
-    if (typeof severity !== "string" && typeof severity !== "undefined") {
+    if (typeof severity !== "string" && typeof severity !== "number" && typeof severity !== "undefined") {
         return;
     }
     return new Diagnostic(
