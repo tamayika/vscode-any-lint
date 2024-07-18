@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.3.3]
+
+### Fixed
+
+- several js expression setting was not correctly handled
+
+### Added
+
+- support `rewriteLine` location in `ignore` action
+
 ## [0.3.2]
 
 ### Changed
