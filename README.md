@@ -164,10 +164,10 @@ You can use two variables in configurations which support JavaScript expression.
 
 ##### `ignore`
 
-| Key      | Type   | Required | Detail                                                                                                                           |
-| -------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| comment  | string |          | the inserting comment for `ignore`. JavaScript expression. result must be `string`                                               |
-| location | string |          | the inserting comment location for `ignore`. `startFile`, `previousLine`, `currentLine` or `nextLine`. default is `previousLine` |
+| Key      | Type   | Required | Detail                                                                                                                                          |
+| -------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| comment  | string |          | the inserting comment for `ignore`. JavaScript expression. result must be `string`                                                              |
+| location | string |          | the inserting comment location for `ignore`. `startFile`, `previousLine`, `currentLine`, `nextLine` or `rewriteLine`. default is `previousLine` |
 
 Please see below example for comment location.
 
@@ -178,6 +178,18 @@ Please see below example for comment location.
 foo // currentLine
 // nextLine
 ```
+
+`rewriteLine` has a different behavior. It rewrites a whole text in diagnostic range.
+You can access text by `$$.content`, line indent by `$$.indent` and eol by `$$.eol`.
+Typically, use below example configuration.
+
+```json
+{
+    "location": "rewriteLine",
+    "comment": "`${$$.indent}// DISABLE RULE${$$.eol}${$$.content}${$$.eol}${$$.indent}// ENABLE RULE`"
+}
+```
+
 
 ##### `run`
 
