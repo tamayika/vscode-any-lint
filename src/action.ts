@@ -38,7 +38,7 @@ export class AnyAction implements vscode.CodeActionProvider {
 
     private async createCodeAction(document: vscode.TextDocument, diagnostic: Diagnostic, diagnosticAction: DiagnosticAction) {
         if (diagnosticAction.condition) {
-            if (!this.safeEval(diagnosticAction.condition, diagnostic)) {
+            if (!(await this.safeEval(diagnosticAction.condition, diagnostic))) {
                 return;
             }
         }
@@ -147,9 +147,9 @@ export class AnyAction implements vscode.CodeActionProvider {
         }
         const binPath = await this.safeEval(diagnosticAction.binPath, diagnostic);
         const action = new vscode.CodeAction(title);
-        const args = (diagnosticAction.args ?? []).map(_ => this.safeEval(_, diagnostic)).filter(_ => !!_);
-        const cwd = diagnosticAction.cwd ? this.safeEval(diagnosticAction.cwd, diagnostic) : diagnostic.context.cwd;
-        const lintAfterRun = diagnosticAction.lintAfterRun ? this.safeEval(diagnosticAction.lintAfterRun, diagnostic) : false;
+        const args = (await Promise.all((diagnosticAction.args ?? []).map(async (_) => await this.safeEval(_, diagnostic)))).filter(_ => !!_);
+        const cwd = diagnosticAction.cwd ? await this.safeEval(diagnosticAction.cwd, diagnostic) : diagnostic.context.cwd;
+        const lintAfterRun = diagnosticAction.lintAfterRun ? await this.safeEval(diagnosticAction.lintAfterRun, diagnostic) : false;
         action.command = {
             title,
             command: runCommand,
