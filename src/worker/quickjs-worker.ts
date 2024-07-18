@@ -11,10 +11,13 @@ async function safeEval(code: string, $: Context) {
     const ctx = quickJS.newContext();
     const area = new Arena(ctx, { isMarshalable: true });
     area.expose({ $: $ });
-    const ret = area.evalCode(code);
-    area.dispose();
-    ctx.dispose();
-    return ret;
+    try {
+        const ret = area.evalCode(code);
+        return ret;
+    } finally {
+        area.dispose();
+        ctx.dispose();
+    }
 }
 
 async function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
@@ -22,10 +25,12 @@ async function safeEvalDiagnosticAction(code: string, $: Context, $$: unknown) {
     const ctx = quickJS.newContext();
     const area = new Arena(ctx, { isMarshalable: true });
     area.expose({ $: $, $$: $$ });
-    const ret = area.evalCode(code);
-    area.dispose();
-    ctx.dispose();
-    return ret;
+    try {
+        return area.evalCode(code);
+    } finally {
+        area.dispose();
+        ctx.dispose();
+    }
 }
 
 async function ensureQuickJS() {

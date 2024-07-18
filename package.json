@@ -190,7 +190,8 @@
                             "startFile",
                             "previousLine",
                             "currentLine",
-                            "nextLine"
+                            "nextLine",
+                            "rewriteLine"
                           ]
                         },
                         "binPath": {

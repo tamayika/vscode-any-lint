@@ -91,6 +91,7 @@ export enum DiagnosticCommentLocation {
     previousLine = "previousLine",
     currentLine = "currentLine",
     nextLine = "nextLine",
+    rewriteLine = "rewriteLine",
 }
 
 interface DiagnosticActionBase {
@@ -109,7 +110,7 @@ export type DiagnosticActionOpenUri = DiagnosticActionBase & {
 export type DiagnosticActionIgnore = DiagnosticActionBase & {
     type: DiagnosticActionType.ignore;
     comment: string;
-    location?: DiagnosticCommentLocation
+    location?: DiagnosticCommentLocation;
 };
 
 export type DiagnosticActionRun = DiagnosticActionBase & {

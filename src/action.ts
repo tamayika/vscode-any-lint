@@ -77,50 +77,83 @@ export class AnyAction implements vscode.CodeActionProvider {
         if (title === undefined || typeof title !== "string") {
             return;
         }
-        const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
-        if (commentResult === undefined || typeof commentResult !== "string") {
-            return;
-        }
-        let comment = commentResult;
         const action = new vscode.CodeAction(title);
         let location: vscode.Range | undefined;
         const eol = getDocumentEol(document);
+        let replacement = "";
         switch (diagnosticAction.location ?? DiagnosticCommentLocation.previousLine) {
             case DiagnosticCommentLocation.startFile:
-                location = new vscode.Range(0, 0, 0, 0);
-                if (!comment.endsWith(eol)) {
-                    comment += eol;
+                {
+                    const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
+                    if (commentResult === undefined || typeof commentResult !== "string") {
+                        return;
+                    }
+                    replacement = commentResult;
+                    location = new vscode.Range(0, 0, 0, 0);
+                    if (!replacement.endsWith(eol)) {
+                        replacement += eol;
+                    }
                 }
                 break;
             case DiagnosticCommentLocation.previousLine:
                 {
+                    const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
+                    if (commentResult === undefined || typeof commentResult !== "string") {
+                        return;
+                    }
+                    replacement = commentResult;
                     location = new vscode.Range(diagnostic.range.start.line, 0, diagnostic.range.start.line, 0);
                     const line = document.lineAt(diagnostic.range.start.line).text;
                     const indent = getIndent(line);
-                    comment = comment.split("\n").map(_ => indent + _).join(eol);
-                    if (!comment.endsWith(eol)) {
-                        comment += eol;
+                    replacement = replacement.split("\n").map(_ => indent + _).join(eol);
+                    if (!replacement.endsWith(eol)) {
+                        replacement += eol;
                     }
                 }
                 break;
             case DiagnosticCommentLocation.currentLine:
                 {
+                    const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
+                    if (commentResult === undefined || typeof commentResult !== "string") {
+                        return;
+                    }
+                    replacement = commentResult;
                     const line = document.lineAt(diagnostic.range.start.line).text;
                     location = new vscode.Range(diagnostic.range.start.line, line.length, diagnostic.range.start.line, line.length);
                 }
                 break;
             case DiagnosticCommentLocation.nextLine:
                 {
+                    const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic);
+                    if (commentResult === undefined || typeof commentResult !== "string") {
+                        return;
+                    }
+                    replacement = commentResult;
                     location = new vscode.Range(diagnostic.range.start.line + 1, 0, diagnostic.range.start.line + 1, 0);
                     const line = document.lineAt(diagnostic.range.start.line).text;
                     const indent = getIndent(line);
-                    comment = comment.split("\n").map(_ => indent + _).join(eol);
-                    if (!comment.endsWith(eol)) {
-                        comment += eol;
+                    replacement = replacement.split("\n").map(_ => indent + _).join(eol);
+                    if (!replacement.endsWith(eol)) {
+                        replacement += eol;
                     }
                 }
                 break;
-
+            case DiagnosticCommentLocation.rewriteLine:
+                {
+                    location = new vscode.Range(diagnostic.range.start.line, diagnostic.range.start.character,
+                        diagnostic.range.end.line, diagnostic.range.end.character);
+                    const line = document.lineAt(diagnostic.range.start.line).text;
+                    const indent = getIndent(line);
+                    const content = document.getText(diagnostic.range);
+                    const commentResult = await this.safeEval(diagnosticAction.comment, diagnostic,
+                        { indent, content, eol }
+                    );
+                    if (commentResult === undefined || typeof commentResult !== "string") {
+                        return;
+                    }
+                    replacement = commentResult;
+                }
+                break;
         }
         if (location === undefined) {
             return;
@@ -130,7 +163,7 @@ export class AnyAction implements vscode.CodeActionProvider {
             command: ignoreCommand,
             arguments: [
                 document.uri.toString(),
-                comment,
+                replacement,
                 location,
             ]
         };
@@ -164,9 +197,15 @@ export class AnyAction implements vscode.CodeActionProvider {
         return action;
     }
 
-    private async safeEval(code: string, diagnostic: Diagnostic) {
+    private async safeEval(code: string, diagnostic: Diagnostic, additional?: object) {
         try {
-            return await safeEvalDiagnosticAction(code, diagnostic.context, diagnostic.rawData);
+            let rawData = diagnostic.rawData;
+            if (additional) {
+                if (typeof rawData === "object" && rawData !== undefined) {
+                    rawData = { ...rawData, ...additional };
+                }
+            }
+            return await safeEvalDiagnosticAction(code, diagnostic.context, rawData);
         } catch (e) {
             this.outputChannel.appendLine("failed to eval");
             this.appendErrorToOutputChannel(e);
