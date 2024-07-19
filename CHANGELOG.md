@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.4.0]
+
+### Added
+
+- add authorization to run linter and `run` action
+
 ## [0.3.4]
 
 ### Fixed
