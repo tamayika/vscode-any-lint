@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.3.4]
+
+### Fixed
+
+- js expression evaluation not finishing when there is a syntax error
+- linter is not executed when vscode restores or reloads window
+
+### Added
+
+- support `rewriteLine` location in `ignore` action
+  
 ## [0.3.3]
 
 ### Fixed
