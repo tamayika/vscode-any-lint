@@ -46,6 +46,9 @@ export class Linter {
                 delete this.diagnosticCollections[removeName];
             }
         }));
+        for (const document of vscode.workspace.textDocuments) {
+            this.lintDocument(document, Event.open);
+        }
     }
 
     public dispose() {
