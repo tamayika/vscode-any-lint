@@ -41,6 +41,16 @@ async function ensureQuickJS() {
     return quickJS;
 }
 
+function processError(code: string, error: unknown) {
+    if (error === undefined || error === null) {
+        return `Evaluated: ${code}\nerror thrown but error is null`;
+    }
+    if (typeof error === "object" && "toString" in error && typeof error.toString === "function") {
+        return `Evaluated: ${code}\n${error.toString()}`;
+    }
+    return `Evaluated: ${code}\nerror is not expected type`;
+}
+
 
 function initialize(parentPort: MessagePort) {
     parentPort.on("message", async ({ id, type, payload }) => {
@@ -58,7 +68,7 @@ function initialize(parentPort: MessagePort) {
                     parentPort.postMessage({
                         id,
                         type,
-                        error,
+                        error: processError(code, error),
                     });
                 }
                 break;
@@ -76,7 +86,7 @@ function initialize(parentPort: MessagePort) {
                     parentPort.postMessage({
                         id,
                         type,
-                        error,
+                        error: processError(code, error),
                     });
                 }
                 break;

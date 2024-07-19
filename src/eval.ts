@@ -23,7 +23,7 @@ function getIdPromise(id: number): { resolve: (_: unknown) => void, reject: (_: 
     return promise;
 }
 
-worker.on("message", ((payload: { id: number, result: unknown } | { id: number, error: unknown }) => {
+worker.on("message", ((payload: { id: number, result: unknown } | { id: number, error: string }) => {
     const promise = getIdPromise(payload.id);
     if (!promise) {
         return;
@@ -31,7 +31,7 @@ worker.on("message", ((payload: { id: number, result: unknown } | { id: number, 
     if ("result" in payload) {
         promise.resolve(payload.result);
     } else if ("error" in payload) {
-        promise.reject(payload.error);
+        promise.reject(new Error(payload.error));
     }
 }));
 
