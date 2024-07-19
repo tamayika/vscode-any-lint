@@ -6,9 +6,7 @@ import { Context } from "./context";
 import { DiagnosticConfiguration, DiagnosticConfigurationLines, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
 import { safeEval } from "./eval";
 import { convertResultToDiagnostic, Diagnostic, diagnosticDefaultFormat } from "./diagnostic";
-
-const configurationKey = "any-lint";
-const configurationLintersKey = "linters";
+import { configurationKey, configurationLintersKey, disableConfirmToAllowToRunKey } from "./configuration";
 
 const debounceIntervals = {
     [Event.change]: 500,
@@ -17,12 +15,14 @@ const debounceIntervals = {
 };
 
 export class Linter {
+    private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private lastTimeout: NodeJS.Timeout | undefined;
     private disaposables: IDisposable[] = [];
     private diagnosticCollections: { [name: string]: vscode.DiagnosticCollection } = {};
 
-    constructor(outputChannel: vscode.OutputChannel) {
+    constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
+        this.context = context;
         this.outputChannel = outputChannel;
         this.disaposables.push(vscode.workspace.onDidChangeTextDocument(e => {
             this.lintDocument(e.document, Event.change);
@@ -179,53 +179,56 @@ export class Linter {
                     break;
             }
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
-            this.lint(
+            const binPath = context.substitute(configuration.binPath);
+            if (!(await this.confirm(configuration.name, binPath, configuration.args ?? []))) {
+                return;
+            }
+            const result = await this.lint(
                 document,
-                context.substitute(configuration.binPath),
+                binPath,
                 (configuration.args || []).map(_ => context.substitute(_)),
                 requiredDiagnosticConfiguration.output,
                 cwd,
                 event,
-            ).then(async result => {
-                this.outputChannel.appendLine(result);
-                let diagnostics: Diagnostic[] = [];
-                try {
-                    diagnostics = await convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
-                } catch (e) {
-                    this.outputChannel.appendLine("failed to convert to diagnostic");
-                    this.appendErrorToOutputChannel(e);
-                }
+            );
+            this.outputChannel.appendLine(result);
+            let diagnostics: Diagnostic[] = [];
+            try {
+                diagnostics = await convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
+            } catch (e) {
+                this.outputChannel.appendLine("failed to convert to diagnostic");
+                this.appendErrorToOutputChannel(e);
+            }
 
-                let collections = this.diagnosticCollections[configuration.name];
-                if (!collections) {
-                    collections = vscode.languages.createDiagnosticCollection(configuration.name);
-                    this.diagnosticCollections[configuration.name] = collections;
-                }
-                collections.clear();
-                const pathToDiagnostics: { [index: string]: Diagnostic[] } = {};
-                for (const diagnostic of diagnostics) {
-                    diagnostic.source = configuration.name;
-                    let filePath = diagnostic.file;
-                    if (!path.isAbsolute(filePath)) {
-                        for (let i = 0; i < filePath.length; i++) {
-                            const resolvedPath = path.resolve(cwd, filePath.substr(i));
-                            if (fs.existsSync(resolvedPath)) {
-                                filePath = resolvedPath;
-                                break;
-                            }
+            let collections = this.diagnosticCollections[configuration.name];
+            if (!collections) {
+                collections = vscode.languages.createDiagnosticCollection(configuration.name);
+                this.diagnosticCollections[configuration.name] = collections;
+            }
+            collections.clear();
+            const pathToDiagnostics: { [index: string]: Diagnostic[] } = {};
+            for (const diagnostic of diagnostics) {
+                diagnostic.source = configuration.name;
+                let filePath = diagnostic.file;
+                if (!path.isAbsolute(filePath)) {
+                    for (let i = 0; i < filePath.length; i++) {
+                        const resolvedPath = path.resolve(cwd, filePath.substr(i));
+                        if (fs.existsSync(resolvedPath)) {
+                            filePath = resolvedPath;
+                            break;
                         }
                     }
-                    pathToDiagnostics[filePath] ||= [];
-                    pathToDiagnostics[filePath].push(diagnostic);
                 }
-                for (const path of Object.keys(pathToDiagnostics)) {
-                    collections.set(vscode.Uri.file(path), pathToDiagnostics[path]);
-                }
-            });
+                pathToDiagnostics[filePath] ||= [];
+                pathToDiagnostics[filePath].push(diagnostic);
+            }
+            for (const path of Object.keys(pathToDiagnostics)) {
+                collections.set(vscode.Uri.file(path), pathToDiagnostics[path]);
+            }
         }
     }
 
-    private lint(document: vscode.TextDocument, binPath: string, args: string[], outputType: DiagnosticOutputType, cwd: string, event: Event): Promise<string> {
+    private async lint(document: vscode.TextDocument, binPath: string, args: string[], outputType: DiagnosticOutputType, cwd: string, event: Event): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             const command = [binPath, ...args].join(" ");
             if (cwd) {
@@ -273,6 +276,37 @@ export class Linter {
                 });
             }
         });
+    }
+
+    private async confirm(name: string, binPath: string, args: string[]): Promise<boolean> {
+        if (vscode.workspace.getConfiguration(configurationKey, null).get<boolean>(disableConfirmToAllowToRunKey)) {
+            return true;
+        }
+        const confirmKey = `allowRun.${name}`;
+        const confirmedConfiguration = this.context.workspaceState.get(confirmKey);
+        if (confirmedConfiguration === false) {
+            return false;
+        }
+        const confirmingConfiguration = JSON.stringify({
+            binPath,
+            args
+        });
+        if (confirmedConfiguration === confirmingConfiguration) {
+            return true;
+        }
+        const result = await vscode.window.showInformationMessage(`"${name}" linter has never executed before or binPath/args was changed in this workspace.
+Are you sure to allow to execute this linter?`, {
+            modal: true, detail: `binPath: ${binPath}
+args: ${JSON.stringify(args)}`
+        }, "Yes", "No");
+        if (result === "Yes") {
+            await this.context.workspaceState.update(confirmKey, confirmingConfiguration);
+            return true;
+        }
+        if (result === "No") {
+            await this.context.workspaceState.update(confirmKey, false);
+        }
+        return false;
     }
 
     private appendErrorToOutputChannel(e: unknown) {

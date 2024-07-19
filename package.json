@@ -25,9 +25,19 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "any-lint.reset-allow-run",
+        "title": "Any Lint: Reset allowed/disallowed linter to run in this workspace"
+      }
+    ],
     "configuration": {
       "title": "Any Lint Configuration",
       "properties": {
+        "any-lint.disableConfirmToAllowToRun": {
+          "type": "boolean",
+          "default": false
+        },
         "any-lint.linters": {
           "type": "array",
           "items": {

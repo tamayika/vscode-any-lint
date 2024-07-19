@@ -7,8 +7,19 @@ VSCode Any Lint allows you to lint any files with any command line tools.
 * Any file type
 * Any command line tool
 
-## Extension Settings
+## Security
 
+This extension can execute any command line tool.
+If the workspace (repository) you are trying to open is completely trustworthy, it is safe to run this extension.
+But if not, it is very dangerous (e.g., running `rm -rf /` as a linter).
+
+To eliminate such risks, this extension asks the user for authorization for each linter.
+The result of this authorization is stored with the linter's name, path, and argument information as keys, so if you change any of them, you will be asked to confirm again.
+You can reset this authorization by command `Reset allowed/disallowed linter to run in this workspace`.
+
+You can disable this authorization by `any-linter.disableConfirmToAllowToRun: false`, but this is not strongly recommended.
+
+## Extension Settings
 
 * `any-lint.linters`: Linter settings. Please see below Linter Configuration
 
