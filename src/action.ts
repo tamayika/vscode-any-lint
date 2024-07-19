@@ -191,7 +191,9 @@ export class AnyAction implements vscode.CodeActionProvider {
                 binPath,
                 args,
                 cwd,
-                lintAfterRun
+                lintAfterRun,
+                diagnosticAction.binPath,
+                diagnosticAction.args ?? []
             ]
         };
         return action;
