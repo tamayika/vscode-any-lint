@@ -1,0 +1,54 @@
+{
+    "any-lint.linters": [
+      {
+        "args": [
+          "-q",
+          "${file}"
+        ],
+        "binPath": "dotenv-linter",
+        "condition": "$.fileExtname.endsWith('.env')",
+        "cwd": "${workspaceFolder}",
+        "diagnostic": {
+          "actions": [
+            {
+              "title": "`Open ${$$.ruleId} rule documentation`",
+              "type": "openUri",
+              "uri": "`https://dotenv-linter.github.io/#/checks/${$$.ruleId.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()}`"
+            },
+            {
+              "comment": "`# dotenv-linter:off ${$$.ruleId}`",
+              "location": "startFile",
+              "title": "`Ignore ${$$.ruleId} rule for entire file`",
+              "type": "ignore"
+            },
+            {
+              "comment": "`${$$.indent}# dotenv-linter:off ${$$.ruleId}${$$.eol}${$$.content}${$$.eol}${$$.indent}# dotenv-linter:on ${$$.ruleId}`",
+              "location": "rewriteLine",
+              "title": "`Ignore ${$$.ruleId} rule for current line`",
+              "type": "ignore"
+            },
+            {
+              "args": [
+                "`fix`",
+                "`-q`",
+                "`--no-backup`",
+                "$.file"
+              ],
+              "binPath": "`dotenv-linter`",
+              "cwd": "$.workspaceFolder",
+              "lintAfterRun": "true",
+              "title": "`Fix all fixable problems`",
+              "type": "run"
+            }
+          ],
+          "format": "${file}:${startLine} ${ruleId}: ${message}",
+          "output": "stdout"
+        },
+        "name": "dotenv-linter",
+        "on": [
+          "save"
+        ]
+      }
+    ]
+  }
+  
