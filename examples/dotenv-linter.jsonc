@@ -1,4 +1,5 @@
 {
+    "any-lint.disableConfirmToAllowToRun": true,
     "any-lint.linters": [
       {
         "args": [
