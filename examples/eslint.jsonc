@@ -7,12 +7,22 @@
                 "--silent",
                 "eslint",
                 "-f",
-                "json",
-                "${file}"
+                "json"
             ],
+            "extraArgs": {
+                "save": [
+                    "${file}"
+                ],
+                "change": [
+                    "--stdin",
+                    "--stdin-filename",
+                    "${file}"
+                ]
+            },
             "condition": "$.fileExtname == '.js'",
             "on": [
-                "save"
+                "save",
+                "change"
             ],
             "diagnostic": {
                 "output": "stdout",

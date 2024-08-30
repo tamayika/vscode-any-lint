@@ -62,6 +62,23 @@
                   "type": "string"
                 }
               },
+              "extraArgs": {
+                "type": "object",
+                "properties": {
+                  "change": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "save": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
               "cwd": {
                 "type": "string"
               },

@@ -15,6 +15,7 @@ export interface LinterConfiguration {
     disabled?: boolean;
     binPath?: string;
     args?: string[];
+    extraArgs?: { [event in Event]: string[] }
     cwd?: string;
     condition?: string;
     on?: Event[];
