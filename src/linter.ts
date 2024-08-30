@@ -180,13 +180,14 @@ export class Linter {
             }
             const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
             const binPath = context.substitute(configuration.binPath);
-            if (!(await this.confirm(configuration.name, binPath, configuration.args ?? []))) {
+            const args = [...(configuration.args ?? []), ...(configuration.extraArgs?.[event] ?? [])];
+            if (!(await this.confirm(configuration.name, binPath, args))) {
                 return;
             }
             const result = await this.lint(
                 document,
                 binPath,
-                (configuration.args || []).map(_ => context.substitute(_)),
+                args.map(_ => context.substitute(_)),
                 requiredDiagnosticConfiguration.output,
                 cwd,
                 event,
@@ -258,7 +259,7 @@ export class Linter {
                 }
             };
             if (event === Event.change) {
-                const child = cp.spawn(binPath, args, { cwd: cwd });
+                const child = cp.spawn(binPath, args, { cwd: cwd, shell: true });
                 let err: Error | undefined;
                 let stdout = "";
                 let stderr = "";
@@ -271,7 +272,7 @@ export class Linter {
                     handleResult(err, stdout, stderr);
                 });
             } else {
-                cp.execFile(binPath, args, { cwd: cwd }, (err, stdout, stderr) => {
+                cp.execFile(binPath, args, { cwd: cwd, shell: true }, (err, stdout, stderr) => {
                     handleResult(err === null ? undefined : err, stdout, stderr);
                 });
             }

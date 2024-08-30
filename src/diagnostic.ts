@@ -88,7 +88,7 @@ function convertResultToDiagnosticByLines(document: vscode.TextDocument, result:
         if (!match || !match.groups) {
             continue;
         }
-        const file = match.groups[diagnosticFileKey];
+        const file = match.groups[diagnosticFileKey] || document.fileName;
         const startLineString = match.groups[diagnosticStartLineKey];
         const startColumnString = match.groups[diagnosticStartColumnKey];
         const endLineString = match.groups[diagnosticEndLineKey];
