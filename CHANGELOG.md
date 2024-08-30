@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.4.1]
+
+### Added
+
+- `${file}` placeholder is now optional. Default is linting document filename.
+- `extraArgs` setting is added. This is useful to support both `save` and `change` `on` setting in one configuration.
+
+### Fixed
+
+- node EINVAL error in Windows when running batch file
+
 ## [0.4.0]
 
 ### Added
