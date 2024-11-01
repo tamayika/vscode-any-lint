@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as cp from "child_process";
 import { Linter } from "./linter";
-import { configurationKey, disableConfirmToAllowToRunKey } from "./configuration";
+import { configurationKey, disableConfirmToAllowToRunKey, onceConfirmedDisableConfirmToAllowToRunKey } from "./configuration";
 
 export const openUriCommand = "any-lint.open-uri";
 export const ignoreCommand = "any-lint.ignore";
@@ -93,6 +93,7 @@ args: ${JSON.stringify(args)}`
 
     // bind required
     public resetAllowRun = async () => {
+        this.context.workspaceState.update(onceConfirmedDisableConfirmToAllowToRunKey, undefined);
         for (const key of this.context.workspaceState.keys()) {
             if (key.startsWith("allowRun.")) {
                 await this.context.workspaceState.update(key, undefined);
