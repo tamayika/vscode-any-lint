@@ -6,7 +6,7 @@ import { Context } from "./context";
 import { DiagnosticConfiguration, DiagnosticConfigurationLines, DiagnosticOutputType, DiagnosticSeverity, DiagnosticType, Event, IDisposable, LinterConfiguration } from "./types";
 import { safeEval } from "./eval";
 import { convertResultToDiagnostic, Diagnostic, diagnosticDefaultFormat } from "./diagnostic";
-import { configurationKey, configurationLintersKey, disableConfirmToAllowToRunKey } from "./configuration";
+import { configurationKey, configurationLintersKey, disableConfirmToAllowToRunKey, onceConfirmedDisableConfirmToAllowToRunKey } from "./configuration";
 
 const debounceIntervals = {
     [Event.change]: 500,
@@ -281,8 +281,25 @@ export class Linter {
 
     private async confirm(name: string, binPath: string, args: string[]): Promise<boolean> {
         if (vscode.workspace.getConfiguration(configurationKey, null).get<boolean>(disableConfirmToAllowToRunKey)) {
-            return true;
+            switch (this.context.workspaceState.get(onceConfirmedDisableConfirmToAllowToRunKey)) {
+                case true:
+                    return true;
+                case false:
+                    return false;
+            }
+            const result = await vscode.window.showInformationMessage("any-linter.disableConfirmToAllowToRun is set to true. Do yo trust this workspace to run lint?", { modal: true }, "Yes", "No");
+            switch (result) {
+                case "Yes":
+                    await this.context.workspaceState.update(onceConfirmedDisableConfirmToAllowToRunKey, true);
+                    return true;
+                case "No":
+                    await this.context.workspaceState.update(onceConfirmedDisableConfirmToAllowToRunKey, false);
+                    return false;
+            }
+            return false;
         }
+        await this.context.workspaceState.update(onceConfirmedDisableConfirmToAllowToRunKey, undefined);
+
         const confirmKey = `allowRun.${name}`;
         const confirmedConfiguration = this.context.workspaceState.get(confirmKey);
         if (confirmedConfiguration === false) {
