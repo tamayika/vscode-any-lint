@@ -17,7 +17,7 @@ To eliminate such risks, this extension asks the user for authorization for each
 The result of this authorization is stored with the linter's name, path, and argument information as keys, so if you change any of them, you will be asked to confirm again.
 You can reset this authorization by command `Reset allowed/disallowed linter to run in this workspace`.
 
-You can disable this authorization by `any-linter.disableConfirmToAllowToRun: false`, but this is not strongly recommended.
+You can disable this authorization by `any-linter.disableConfirmToAllowToRun: true`, but you will be asked once if you trust this workspace.
 
 ## Extension Settings
 

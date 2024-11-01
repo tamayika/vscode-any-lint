@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.4.2]
+
+### Added
+
+- Check if this workspace is trusted when `any-linter.disableConfirmToAllowToRun: true`.
+
 ## [0.4.1]
 
 ### Added
