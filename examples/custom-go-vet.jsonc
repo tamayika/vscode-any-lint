@@ -8,7 +8,11 @@
                 "--vettool=${workspaceFolder}/bin/mytool", // change here to your custom analyzer path
                 "."
             ],
-            "condition": "$.fileExtname == '.go'"
+            "condition": "$.fileExtname == '.go'",
+            // If testify is used, all go files are opened before running tests.
+            // This results in all go files being linted.
+            // This option is useful to reduce unnecessary duplicated linting.
+            "debounceKey": "$.relativeFileDirname"
         }
     ]
 }
