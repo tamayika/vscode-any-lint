@@ -20,6 +20,7 @@ export interface LinterConfiguration {
     condition?: string;
     on?: Event[];
     diagnostic?: DiagnosticConfiguration;
+    debounceKey?:string;
 }
 
 export enum DiagnosticOutputType {

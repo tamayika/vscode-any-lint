@@ -18,6 +18,7 @@ export class Linter {
     private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private lastTimeout: NodeJS.Timeout | undefined;
+    private lastTimeoutPerLinterConfiguration: { [name: string]: NodeJS.Timeout | undefined } = {};
     private disaposables: IDisposable[] = [];
     private diagnosticCollections: { [name: string]: vscode.DiagnosticCollection } = {};
 
@@ -62,12 +63,12 @@ export class Linter {
         this.diagnosticCollections = {};
     }
 
-    public async lintDocumentByUri(uri: string) {
+    public lintDocumentByUri(uri: string) {
         const document = vscode.workspace.textDocuments.find(_ => _.uri.toString() === uri);
         if (!document) {
             return;
         }
-        await this.lintDocument(document, Event.force);
+        this.lintDocument(document, Event.force);
     }
 
     private clearLintDocument(document: vscode.TextDocument) {
@@ -80,11 +81,11 @@ export class Linter {
         }
     }
 
-    private async lintDocument(document: vscode.TextDocument, event: Event) {
+    private lintDocument(document: vscode.TextDocument, event: Event) {
         const selection = vscode.window.activeTextEditor?.selection ?? new vscode.Selection(0, 0, 0, 0);
         const context = new Context(document, selection);
         if (event === Event.open) {
-            await this.lintDocumentImpl(document, context, Event.force);
+            this.lintDocumentImpl(document, context, Event.force);
         } else {
             if (this.lastTimeout) {
                 clearTimeout(this.lastTimeout);
@@ -115,117 +116,145 @@ export class Linter {
                     this.appendErrorToOutputChannel(e);
                 }
             }
-            const diagnosticConfiguration = configuration.diagnostic;
-            const commonDiagnosticConfiguration = {
-                output: diagnosticConfiguration?.output ?? DiagnosticOutputType.stderr,
-                lineZeroBased: diagnosticConfiguration?.lineZeroBased ?? false,
-                columnZeroBased: diagnosticConfiguration?.columnZeroBased ?? false,
-                columnCharacterBased: diagnosticConfiguration?.columnCharacterBased ?? false,
-                endColumnInclusive: diagnosticConfiguration?.endColumnInclusive ?? false,
-                severity: diagnosticConfiguration?.severity ?? DiagnosticSeverity.error,
-                actions: diagnosticConfiguration?.actions ?? [],
-            };
-            let requiredDiagnosticConfiguration: Required<DiagnosticConfiguration>;
-            switch (diagnosticConfiguration?.type) {
-                case DiagnosticType.json:
-                    requiredDiagnosticConfiguration = {
-                        ...commonDiagnosticConfiguration,
-                        type: DiagnosticType.json,
-                        selectors: diagnosticConfiguration?.selectors ?? {
-                            diagnostics: "",
-                            file: "",
-                            startLine: "",
-                            startColumn: "",
-                        },
-                        severityMap: diagnosticConfiguration?.severityMap ?? {
-                            [DiagnosticSeverity.error]: DiagnosticSeverity.error,
-                            [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
-                            [DiagnosticSeverity.info]: DiagnosticSeverity.info,
-                            [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
-                        },
-                    };
-                    break;
-                case DiagnosticType.yaml:
-                    requiredDiagnosticConfiguration = {
-                        ...commonDiagnosticConfiguration,
-                        type: DiagnosticType.yaml,
-                        selectors: diagnosticConfiguration?.selectors ?? {
-                            diagnostics: "",
-                            file: "",
-                            startLine: "",
-                            startColumn: "",
-                        },
-                        severityMap: diagnosticConfiguration?.severityMap ?? {
-                            [DiagnosticSeverity.error]: DiagnosticSeverity.error,
-                            [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
-                            [DiagnosticSeverity.info]: DiagnosticSeverity.info,
-                            [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
-                        },
-                    };
-                    break;
-                case DiagnosticType.lines:
-                default:
-                    requiredDiagnosticConfiguration = {
-                        ...commonDiagnosticConfiguration,
-                        type: DiagnosticType.lines,
-                        format: (diagnosticConfiguration as DiagnosticConfigurationLines)?.format ?? diagnosticDefaultFormat,
-                        severityMap: diagnosticConfiguration?.severityMap ?? {
-                            [DiagnosticSeverity.error]: DiagnosticSeverity.error,
-                            [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
-                            [DiagnosticSeverity.info]: DiagnosticSeverity.info,
-                            [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
-                        },
-                    };
-                    break;
+            let computedDebounceKey: string | undefined;
+            if (configuration.debounceKey) {
+                try {
+                    const result = await safeEval(configuration.debounceKey, context);
+                    if (typeof result === "string") {
+                        computedDebounceKey = result;
+                    }
+                } catch (e) {
+                    console.log(e);
+                    this.appendErrorToOutputChannel(e);
+                }
             }
-            const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
-            const binPath = context.substitute(configuration.binPath);
-            const args = [...(configuration.args ?? []), ...(configuration.extraArgs?.[event] ?? [])];
-            if (!(await this.confirm(configuration.name, binPath, args))) {
-                return;
+            if (!computedDebounceKey) {
+                this.lintDocumentImpl2(document, context, event, configuration);
+                continue;
             }
-            const result = await this.lint(
-                document,
-                binPath,
-                args.map(_ => context.substitute(_)),
-                requiredDiagnosticConfiguration.output,
-                cwd,
-                event,
-            );
-            this.outputChannel.appendLine(result);
-            let diagnostics: Diagnostic[] = [];
-            try {
-                diagnostics = await convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
-            } catch (e) {
-                this.outputChannel.appendLine("failed to convert to diagnostic");
-                this.appendErrorToOutputChannel(e);
+            const debounceKey = `${configuration.name}::${computedDebounceKey}`;
+            if (this.lastTimeoutPerLinterConfiguration[debounceKey]) {
+                clearTimeout(this.lastTimeoutPerLinterConfiguration[debounceKey]!);
             }
+            this.lastTimeoutPerLinterConfiguration[debounceKey] = setTimeout(() => this.lintDocumentImpl2(document, context, event, configuration), 500);
+        }
+    }
 
-            let collections = this.diagnosticCollections[configuration.name];
-            if (!collections) {
-                collections = vscode.languages.createDiagnosticCollection(configuration.name);
-                this.diagnosticCollections[configuration.name] = collections;
-            }
-            collections.clear();
-            const pathToDiagnostics: { [index: string]: Diagnostic[] } = {};
-            for (const diagnostic of diagnostics) {
-                diagnostic.source = configuration.name;
-                let filePath = diagnostic.file;
-                if (!path.isAbsolute(filePath)) {
-                    for (let i = 0; i < filePath.length; i++) {
-                        const resolvedPath = path.resolve(cwd, filePath.substr(i));
-                        if (fs.existsSync(resolvedPath)) {
-                            filePath = resolvedPath;
-                            break;
-                        }
+    private async lintDocumentImpl2(document: vscode.TextDocument, context: Context, event: Event, configuration: LinterConfiguration) {
+        if (!configuration.binPath) {
+            return;
+        }
+
+        const diagnosticConfiguration = configuration.diagnostic;
+        const commonDiagnosticConfiguration = {
+            output: diagnosticConfiguration?.output ?? DiagnosticOutputType.stderr,
+            lineZeroBased: diagnosticConfiguration?.lineZeroBased ?? false,
+            columnZeroBased: diagnosticConfiguration?.columnZeroBased ?? false,
+            columnCharacterBased: diagnosticConfiguration?.columnCharacterBased ?? false,
+            endColumnInclusive: diagnosticConfiguration?.endColumnInclusive ?? false,
+            severity: diagnosticConfiguration?.severity ?? DiagnosticSeverity.error,
+            actions: diagnosticConfiguration?.actions ?? [],
+        };
+        let requiredDiagnosticConfiguration: Required<DiagnosticConfiguration>;
+        switch (diagnosticConfiguration?.type) {
+            case DiagnosticType.json:
+                requiredDiagnosticConfiguration = {
+                    ...commonDiagnosticConfiguration,
+                    type: DiagnosticType.json,
+                    selectors: diagnosticConfiguration?.selectors ?? {
+                        diagnostics: "",
+                        file: "",
+                        startLine: "",
+                        startColumn: "",
+                    },
+                    severityMap: diagnosticConfiguration?.severityMap ?? {
+                        [DiagnosticSeverity.error]: DiagnosticSeverity.error,
+                        [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
+                        [DiagnosticSeverity.info]: DiagnosticSeverity.info,
+                        [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
+                    },
+                };
+                break;
+            case DiagnosticType.yaml:
+                requiredDiagnosticConfiguration = {
+                    ...commonDiagnosticConfiguration,
+                    type: DiagnosticType.yaml,
+                    selectors: diagnosticConfiguration?.selectors ?? {
+                        diagnostics: "",
+                        file: "",
+                        startLine: "",
+                        startColumn: "",
+                    },
+                    severityMap: diagnosticConfiguration?.severityMap ?? {
+                        [DiagnosticSeverity.error]: DiagnosticSeverity.error,
+                        [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
+                        [DiagnosticSeverity.info]: DiagnosticSeverity.info,
+                        [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
+                    },
+                };
+                break;
+            case DiagnosticType.lines:
+            default:
+                requiredDiagnosticConfiguration = {
+                    ...commonDiagnosticConfiguration,
+                    type: DiagnosticType.lines,
+                    format: (diagnosticConfiguration as DiagnosticConfigurationLines)?.format ?? diagnosticDefaultFormat,
+                    severityMap: diagnosticConfiguration?.severityMap ?? {
+                        [DiagnosticSeverity.error]: DiagnosticSeverity.error,
+                        [DiagnosticSeverity.warning]: DiagnosticSeverity.warning,
+                        [DiagnosticSeverity.info]: DiagnosticSeverity.info,
+                        [DiagnosticSeverity.hint]: DiagnosticSeverity.hint,
+                    },
+                };
+                break;
+        }
+        const cwd = configuration.cwd ? context.substitute(configuration.cwd) : context.cwd;
+        const binPath = context.substitute(configuration.binPath);
+        const args = [...(configuration.args ?? []), ...(configuration.extraArgs?.[event] ?? [])];
+        if (!(await this.confirm(configuration.name, binPath, args))) {
+            return;
+        }
+        const result = await this.lint(
+            document,
+            binPath,
+            args.map(_ => context.substitute(_)),
+            requiredDiagnosticConfiguration.output,
+            cwd,
+            event,
+        );
+        this.outputChannel.appendLine(result);
+        let diagnostics: Diagnostic[] = [];
+        try {
+            diagnostics = await convertResultToDiagnostic(document, result, requiredDiagnosticConfiguration, context);
+        } catch (e) {
+            this.outputChannel.appendLine("failed to convert to diagnostic");
+            this.appendErrorToOutputChannel(e);
+        }
+
+        let collections = this.diagnosticCollections[configuration.name];
+        if (!collections) {
+            collections = vscode.languages.createDiagnosticCollection(configuration.name);
+            this.diagnosticCollections[configuration.name] = collections;
+        }
+        collections.clear();
+        const pathToDiagnostics: { [index: string]: Diagnostic[] } = {};
+        for (const diagnostic of diagnostics) {
+            diagnostic.source = configuration.name;
+            let filePath = diagnostic.file;
+            if (!path.isAbsolute(filePath)) {
+                for (let i = 0; i < filePath.length; i++) {
+                    const resolvedPath = path.resolve(cwd, filePath.substr(i));
+                    if (fs.existsSync(resolvedPath)) {
+                        filePath = resolvedPath;
+                        break;
                     }
                 }
-                pathToDiagnostics[filePath] ||= [];
-                pathToDiagnostics[filePath].push(diagnostic);
             }
-            for (const path of Object.keys(pathToDiagnostics)) {
-                collections.set(vscode.Uri.file(path), pathToDiagnostics[path]);
-            }
+            pathToDiagnostics[filePath] ||= [];
+            pathToDiagnostics[filePath].push(diagnostic);
+        }
+        for (const path of Object.keys(pathToDiagnostics)) {
+            collections.set(vscode.Uri.file(path), pathToDiagnostics[path]);
         }
     }
 

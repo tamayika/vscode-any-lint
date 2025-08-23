@@ -25,17 +25,18 @@ You can disable this authorization by `any-linter.disableConfirmToAllowToRun: tr
 
 ### Linter Configuration
 
-| Key        | Type                           | Required           | Detail                                                                           |
-| ---------- | ------------------------------ | ------------------ | -------------------------------------------------------------------------------- |
-| name       | string                         | :heavy_check_mark: | the linter name. This is used for [Diagnostic.source][1].                        |
-| binPath    | string                         | :heavy_check_mark: | the command line tool path.                                                      |
-| args       | Array\<string\>                |                    | the command line tool arguments.                                                 |
-| extraArgs  | map\<string, Array\<string\>\> |                    | the command line tool extra arguments depends on `on` setting.                   |
-| cwd        | string                         |                    | the current working directory. default is file's directory.                      |
-| condition  | string                         |                    | if this JavaScript expression returns truthy value, linter starts.               |
-| on         | Array\<string\>                |                    | `change`: on file changed. `save`: on file saved.                                |
-| disabled   | boolean                        |                    | force disable linting. this is usedful for debug when you have multiple linters. |
-| diagnostic | DiagnosticConfiguration        |                    | the diagnostic configuration                                                     |
+| Key         | Type                           | Required           | Detail                                                                                    |
+| ----------- | ------------------------------ | ------------------ | ----------------------------------------------------------------------------------------- |
+| name        | string                         | :heavy_check_mark: | the linter name. This is used for [Diagnostic.source][1].                                 |
+| binPath     | string                         | :heavy_check_mark: | the command line tool path.                                                               |
+| args        | Array\<string\>                |                    | the command line tool arguments.                                                          |
+| extraArgs   | map\<string, Array\<string\>\> |                    | the command line tool extra arguments depends on `on` setting.                            |
+| cwd         | string                         |                    | the current working directory. default is file's directory.                               |
+| condition   | string                         |                    | if this JavaScript expression returns truthy value, linter starts.                        |
+| on          | Array\<string\>                |                    | `change`: on file changed. `save`: on file saved.                                         |
+| disabled    | boolean                        |                    | force disable linting. this is usedful for debug when you have multiple linters.          |
+| diagnostic  | DiagnosticConfiguration        |                    | the diagnostic configuration                                                              |
+| debounceKey | string                         |                    | if this Javascript expression is set, linter execution will be debounced by computed key. |
 
 When `change` is used for `on`, current editing buffer is passed to spawned process by `STDIN`.
 

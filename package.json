@@ -94,6 +94,9 @@
                   ]
                 }
               },
+              "debounceKey": {
+                "type": "string"
+              },
               "diagnostic": {
                 "type": "object",
                 "properties": {
