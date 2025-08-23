@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.4.3]
+
+### Added
+
+- `debounceKey` option is added.
+
 ## [0.4.2]
 
 ### Added
